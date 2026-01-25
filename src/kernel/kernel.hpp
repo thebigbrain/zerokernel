@@ -50,4 +50,10 @@ public:
         // 调用由 Bootloader 准备好的底层原语
         _hardware_switch(&prev->stack_pointer, _current->stack_pointer);
     }
+
+    void run()
+    {
+        bootstrap();
+        dispatch();
+    }
 };

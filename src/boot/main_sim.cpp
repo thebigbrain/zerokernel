@@ -25,7 +25,7 @@ int main()
 
     std::cout << "[Bootloader] Handing over control to Kernel..." << std::endl;
 
-    kernel->bootstrap();
+    kernel->run();
 
     return 0;
 }
