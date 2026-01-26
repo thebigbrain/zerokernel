@@ -23,11 +23,13 @@ set(KERNEL_SOURCES
     src/kernel/kernel.cpp
     src/kernel/kernel.hpp
     src/kernel/task.hpp
-    src/kernel/types.hpp
+    src/kernel/ITaskContext.hpp
+    src/kernel/ICPUEngine.hpp
+    src/kernel/memory.hpp
 )
 
 set(BOOT_SOURCES
-    src/boot/main_sim.cpp
+    src/boot/main.cpp
     src/boot/context_switch.asm # CMake 会自动识别并调用 ml64.exe
 )
 
