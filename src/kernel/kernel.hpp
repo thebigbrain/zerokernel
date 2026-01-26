@@ -1,5 +1,6 @@
 #pragma once
 #include "task.hpp"
+#include "types.hpp"
 
 class Kernel
 {
