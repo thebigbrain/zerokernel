@@ -9,6 +9,12 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if (MSVC)
+    # 只为 C 和 C++ 编译器添加 /utf-8
+    add_compile_options("$<$<AND:$<C_COMPILER_ID:MSVC>,$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>>:/utf-8>")
+    add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>>:/utf-8>")
+endif()
+
 # 包含路径
 include_directories("src" "include")
 
@@ -31,10 +37,4 @@ add_executable(KernelSim ${KERNEL_SOURCES} ${BOOT_SOURCES})
 # Windows 特殊设置：关闭增量链接（防止干扰汇编地址）并设置栈大小
 if(MSVC)
     set_target_properties(KernelSim PROPERTIES LINK_FLAGS "/INCREMENTAL:NO")
-    # 添加UTF-8编码支持
-    add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
-    add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-    
-    # 或者针对特定目标
-    # target_compile_options(your_target PRIVATE /utf-8)
 endif()
