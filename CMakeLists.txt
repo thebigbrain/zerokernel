@@ -30,7 +30,7 @@ set(KERNEL_SOURCES
 
 set(BOOT_SOURCES
     src/boot/main.cpp
-    src/boot/context_switch.asm # CMake 会自动识别并调用 ml64.exe
+    src/arch/win/context_switch.asm # CMake 会自动识别并调用 ml64.exe
 )
 
 # 生成可执行程序
