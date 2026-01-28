@@ -8,6 +8,12 @@
 class ICPUEngine
 {
 public:
+    // 让内核知道需要分配多少内存
+    virtual size_t get_context_size() const = 0;
+
+    // 在指定地址构造一个架构相关的上下文对象
+    virtual ITaskContext *create_context_at(void *address) = 0;
+
     // 核心能力：接受一个上下文，并开始运行它
     virtual void execute(ITaskContext *context) = 0;
 

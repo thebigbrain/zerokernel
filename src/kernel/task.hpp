@@ -1,5 +1,8 @@
 #pragma once
 #include "ITaskContext.hpp"
+#include "ITaskManager.hpp"
+
+#include <cstdint>
 
 class Task
 {
@@ -10,11 +13,23 @@ private:
 public:
     Task(uint32_t id, ITaskContext *ctx) : _id(id), _context(ctx) {}
 
-    ITaskContext *get_context() const { return _context; }
-    uint32_t get_id() const { return _id; }
-
     void prepare(void (*entry)(), void *stack_top)
     {
-        _context->prepare(entry, stack_top);
+        // 确保 stack_top 是 8 字节对齐的（x64 必须）
+        uintptr_t top = (uintptr_t)stack_top;
+        top &= ~0x7ULL;
+
+        uintptr_t *stack = (uintptr_t *)top;
+
+        // 1. 压入退出路由器 (在 top 之下写入)
+        // 此时写入的是栈的最顶端槽位
+        stack[-1] = (uintptr_t)task_exit_router;
+
+        // 2. 将调整后的栈顶交给 Context
+        // 下一次压栈会从 stack[-2] 开始
+        void *adjusted_stack = (void *)&stack[-1];
+        _context->prepare(entry, adjusted_stack);
     }
+
+    ITaskContext *get_context() const { return _context; }
 };

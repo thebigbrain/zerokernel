@@ -13,6 +13,9 @@ if (MSVC)
     # 只为 C 和 C++ 编译器添加 /utf-8
     add_compile_options("$<$<AND:$<C_COMPILER_ID:MSVC>,$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>>:/utf-8>")
     add_compile_options("$<$<AND:$<CXX_COMPILER_ID:MSVC>,$<NOT:$<COMPILE_LANGUAGE:ASM_MASM>>>:/utf-8>")
+    # add_compile_options(/fsanitize=address)
+else()
+    # add_compile_options(-fsanitize=address)
 endif()
 
 # 包含路径
@@ -22,14 +25,18 @@ include_directories("src" "include")
 set(KERNEL_SOURCES
     src/kernel/kernel.cpp
     src/kernel/kernel.hpp
+    src/kernel/ITaskManager.hpp
     src/kernel/task.hpp
     src/kernel/ITaskContext.hpp
     src/kernel/ICPUEngine.hpp
     src/kernel/memory.hpp
+    src/kernel/ObjectFactory.hpp
 )
 
 set(BOOT_SOURCES
     src/boot/main.cpp
+    src/arch/win/WinCPUEngine.hpp
+    src/arch/win/WinCPUEngine.cpp
     src/arch/win/context_switch.asm # CMake 会自动识别并调用 ml64.exe
 )
 

@@ -34,24 +34,13 @@ extern "C" void context_switch_asm(void **old_sp, void *new_sp);
 class WinCPUEngine : public ICPUEngine
 {
 public:
-    void execute(ITaskContext *context) override
-    {
-        // 初始启动：直接强行加载栈指针并跳转
-        void *dummy_old_sp;
-        context_switch_asm(&dummy_old_sp, context->get_stack_pointer());
-    }
+    size_t WinCPUEngine::get_context_size() const override;
 
-    void transit(ITaskContext *current, ITaskContext *next) override
-    {
-        // 调用汇编原语
-        void **old_sp_ptr = (void **)current; // 这里的 hack 取决于 WinTaskContext 的布局
-        // 更稳妥的做法：
-        void *next_sp = next->get_stack_pointer();
+    ITaskContext *WinCPUEngine::create_context_at(void *address);
 
-        // 获取 current 对象中存储 sp 的成员地址
-        // 假设 WinTaskContext 的第一个成员就是 sp
-        context_switch_asm(&(static_cast<WinTaskContext *>(current)->sp), next_sp);
-    }
+    void execute(ITaskContext *context) override;
+
+    void transit(ITaskContext *current, ITaskContext *next) override;
 
     void halt() override { ExitProcess(0); }
     void interrupt_enable(bool enable) override { /* 模拟层暂不实现 */ }
