@@ -15,7 +15,7 @@ void idle_task_logic()
         printf("I am the idle task!\n");
         // 在 Windows 模拟器里可以 Sleep(1) 降低占用
         // 在真机里是 __asm__("hlt");
-        Sleep(1);
+        Sleep(100);
         g_kernel->yield();
     }
 }
