@@ -1,4 +1,5 @@
 add_library(kernel STATIC 
+    PlacementNew.hpp
     Kernel.cpp 
     Kernel.hpp
     Task.hpp

@@ -1,7 +1,17 @@
 #include "Kernel.hpp"
 #include "ITaskManager.hpp"
 #include "KernelProxy.hpp"
+#include "KernelCallback.hpp"
 #include <common/BootInfo.hpp>
+
+// 这个宏的作用是：自动生成一个静态的“跳板”并打包成 KernelCallback 对象
+#define BIND_KERNEL_CB(Class, Func, ObjPtr)                                      \
+    KernelCallback(                                                              \
+        [](const Message &m, void *ctx) { static_cast<Class *>(ctx)->Func(m); }, \
+        static_cast<void *>(ObjPtr))
+
+// 使用示例（如果你的编译器支持这种 Lambda 到指针的转换）
+// _bus->subscribe(TYPE, BIND_KERNEL_CB(handle_load_task, this));
 
 static ITaskManager *g_manager_instance = nullptr;
 Kernel *Kernel::instance = nullptr;
@@ -27,11 +37,12 @@ void Kernel::bootstrap(BootInfo *info)
     _boot_info = info;
 
     set_task_manager_instance(this);
-    _bus->subscribe(MessageType::SYS_LOAD_TASK, [this](const Message &msg)
-                    { this->handle_load_task(msg); });
 
-    _bus->subscribe(MessageType::EVENT_PRINT, [this](const Message &msg)
-                    { this->handle_event_print(msg); });
+    void *bus_mem = _factory->allocate_raw(sizeof(MessageBus));
+    this->_bus = new (bus_mem) MessageBus(_factory);
+    _bus->subscribe(MessageType::SYS_LOAD_TASK, BIND_KERNEL_CB(Kernel, handle_load_task, this));
+
+    _bus->subscribe(MessageType::EVENT_PRINT, BIND_KERNEL_CB(Kernel, handle_event_print, this));
 
     // 直接拉起 RootTask
     this->spawn_fixed_task((void *)_boot_info->root_task_entry, _boot_info->config_ptr);
@@ -74,7 +85,7 @@ void Kernel::run_loop()
     while (true)
     {
         // 处理总线上的所有事件（分发给各订阅者，包括内核自己）
-        _bus->process_and_route();
+        _bus->dispatch_messages();
 
         // 执行调度逻辑（挑选有消息或就绪的任务进行 transit）
         yield();

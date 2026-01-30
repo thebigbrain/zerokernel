@@ -29,6 +29,11 @@ public:
         return obj;
     }
 
+    void deallocate(void *ptr)
+    {
+        // 什么也不做
+    }
+
     // 申请一块裸内存（用于栈）
     void *allocate_raw(size_t size)
     {

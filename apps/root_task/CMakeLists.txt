@@ -10,7 +10,7 @@ target_compile_options(root_task PRIVATE
 # 2. 修正链接器选项
 # 我们需要显式关闭 DYNAMICBASE，这样 /FIXED 才能生效
 set_target_properties(root_task PROPERTIES 
-    LINK_FLAGS "/ENTRY:_binary_root_task_entry /NODEFAULTLIB /SUBSYSTEM:CONSOLE /FIXED /DYNAMICBASE:NO /ALIGN:16"
+    LINK_FLAGS "/ENTRY:_binary_root_task_entry /NODEFAULTLIB /SUBSYSTEM:CONSOLE /FIXED /DYNAMICBASE:NO /ALIGN:64"
 )
 
 # 3. 针对 Debug 模式的额外清理
