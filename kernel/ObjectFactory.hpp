@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <utility>
 #include <new>
-#include "memory.hpp"
+#include "Memory.hpp"
 
 class ObjectFactory
 {
@@ -18,6 +18,8 @@ public:
     template <typename T, typename... Args>
     T *create(Args &&...args)
     {
+        static_assert(!std::is_abstract_v<T>, "Cannot create abstract class with ObjectFactory");
+
         if (_remaining < sizeof(T))
             return nullptr;
 

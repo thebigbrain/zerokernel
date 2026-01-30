@@ -18,32 +18,24 @@ else()
     # add_compile_options(-fsanitize=address)
 endif()
 
-# 包含路径
-include_directories("src" "include")
+include_directories(${CMAKE_SOURCE_DIR})
 
-# 源文件列表
-set(KERNEL_SOURCES
-    src/kernel/kernel.cpp
-    src/kernel/kernel.hpp
-    src/kernel/ITaskManager.hpp
-    src/kernel/task.hpp
-    src/kernel/ITaskContext.hpp
-    src/kernel/ICPUEngine.hpp
-    src/kernel/memory.hpp
-    src/kernel/ObjectFactory.hpp
+# 1. 构建所有组件
+add_subdirectory(apps/root_task)
+# add_subdirectory(apps/kbd_driver)
+add_subdirectory(kernel)
+
+add_subdirectory(simulator)
+
+# 查找 Python 解释器
+find_package(Python3 REQUIRED)
+
+add_custom_target(os_image ALL
+    # 使用 Python3_EXECUTABLE 确保路径正确
+    # 增加 WORKING_DIRECTORY 确保脚本能找到各个二进制文件
+    COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/scripts/pack_image.py"
+    DEPENDS kernel root_task
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    COMMENT "正在合成物理镜像 OS_FULL_PHYSICAL.img..."
+    VERBATIM
 )
-
-set(BOOT_SOURCES
-    src/boot/main.cpp
-    src/arch/win/WinCPUEngine.hpp
-    src/arch/win/WinCPUEngine.cpp
-    src/arch/win/context_switch.asm # CMake 会自动识别并调用 ml64.exe
-)
-
-# 生成可执行程序
-add_executable(KernelSim ${KERNEL_SOURCES} ${BOOT_SOURCES})
-
-# Windows 特殊设置：关闭增量链接（防止干扰汇编地址）并设置栈大小
-if(MSVC)
-    set_target_properties(KernelSim PROPERTIES LINK_FLAGS "/INCREMENTAL:NO")
-endif()

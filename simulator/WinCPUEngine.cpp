@@ -1,6 +1,9 @@
 #include "WinCPUEngine.hpp"
 #include <new>
 #include <iostream>
+#include "WinTaskContext.hpp"
+
+extern "C" void context_switch_asm(void **old_sp, void *new_sp);
 
 // 返回 Windows 模拟环境下的上下文结构大小
 size_t WinCPUEngine::get_context_size() const
