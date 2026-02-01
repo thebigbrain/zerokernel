@@ -31,6 +31,6 @@ struct ZImgHeader
     uint64_t root_entry_off;  // 8 bytes
     uint64_t config_phys;     // 8 bytes
     uint64_t memory_required; // 8 bytes
-}; // Total: 44 bytes
+};
 
 #pragma pack(pop)

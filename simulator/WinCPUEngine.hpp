@@ -12,7 +12,7 @@ public:
 
     ITaskContext *WinCPUEngine::create_context_at(void *address);
 
-    void execute(ITaskContext *context) override;
+    void switch_to(ITaskContext *context) override;
 
     void transit(ITaskContext *current, ITaskContext *next) override;
 

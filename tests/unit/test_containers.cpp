@@ -1,4 +1,4 @@
-#include "test.hpp"
+#include "test_framework.hpp"
 #include "kernel/KList.hpp"
 
 void test_klist_placement_new_integrity()

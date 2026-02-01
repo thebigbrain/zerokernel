@@ -2,26 +2,29 @@
 
 #include "common/IUserRuntime.hpp"
 #include "MessageBus.hpp"
-#include "Kernel.hpp"
+#include "ITaskManager.hpp"
 
 class KernelProxy : public IUserRuntime
 {
 private:
     MessageBus *_bus;
-    Kernel *_kernel;
+    ITaskManager *_task_manager; // 核心调整：改为依赖任务管理器接口
 
 public:
-    KernelProxy(MessageBus *bus, Kernel *k) : _bus(bus), _kernel(k) {}
+    // 构造函数注入：这使得测试时可以注入 MockBus 和 MockTaskManager
+    KernelProxy(MessageBus *bus, ITaskManager *tm)
+        : _bus(bus), _task_manager(tm) {}
 
-    // 纯粹的消息透传
+    // 消息投递：依然是透传给总线
     void publish(const Message &msg) override
     {
         _bus->publish(msg);
     }
 
-    // 纯粹的控制权转交
+    // 协作调度：转交给任务管理器
     void yield() override
     {
-        _kernel->yield();
+        // 领域语义：任务请求让出执行权，管理器决定切给谁
+        _task_manager->yield_current_task();
     }
 };

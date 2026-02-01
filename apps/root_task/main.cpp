@@ -1,8 +1,7 @@
 #include "common/IUserRuntime.hpp"
-#include "common/RootTaskDef.hpp"
 
 // 约定：内核将 Runtime 指针和配置指针通过寄存器传入
-extern "C" void ROOT_TASK_ENTRY(IUserRuntime *rt)
+extern "C" void main(IUserRuntime *rt)
 {
     // 构造一条日志消息
     Message msg;

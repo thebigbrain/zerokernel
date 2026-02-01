@@ -25,5 +25,4 @@ public:
     void prepare(void (*entry)(), void *stack_top, void (*exit_router)()) override;
 
     void *get_stack_pointer() const override { return sp; }
-    void set_stack_pointer(void *s) override { sp = (WinX64Regs *)s; }
 };

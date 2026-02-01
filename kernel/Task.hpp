@@ -3,13 +3,13 @@
 #include "ITaskContext.hpp"
 #include "ITaskManager.hpp"
 #include "common/Message.hpp"
-#include "ITask.hpp"
+#include "ITaskControlBlock.hpp"
 #include "ObjectFactory.hpp"
 
 #include <cstdint>
 #include <queue>
 
-class Task : public ITask
+class Task : public ITaskControlBlock
 {
 private:
     uint32_t _id;

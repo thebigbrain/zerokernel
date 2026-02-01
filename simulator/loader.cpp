@@ -7,34 +7,6 @@
 #include <kernel/Memory.hpp>
 #include <common/BootInfo.hpp>
 
-// 辅助函数：解析 PE/ELF 入口点偏移
-uintptr_t get_entry_offset(void *buffer)
-{
-    uint8_t *raw = (uint8_t *)buffer;
-
-    // 1. Windows PE (MZ...)
-    if (raw[0] == 'M' && raw[1] == 'Z')
-    {
-        uint32_t pe_header_ptr = *(uint32_t *)(raw + 0x3C);
-        // AddressOfEntryPoint 在可选头偏移 0x28 处
-        uint32_t entry_point_rva = *(uint32_t *)(raw + pe_header_ptr + 0x28);
-        return (uintptr_t)entry_point_rva;
-    }
-
-    // 2. Linux ELF (\x7F ELF)
-    if (raw[0] == 0x7F && raw[1] == 'E' && raw[2] == 'L' && raw[3] == 'F')
-    {
-        // 假设是 64 位 ELF (Entry point 偏移 24)
-        uint64_t entry_addr = *(uint64_t *)(raw + 24);
-        // 注意：ELF 入口通常是绝对虚拟地址，需要剥离基址（这里假设基址是 0x400000）
-        // 在裸机/简单环境下，通常需要链接脚本配合生成相对地址
-        return (uintptr_t)(entry_addr & 0xFFFFFF);
-    }
-
-    // 3. 纯二进制
-    return 0;
-}
-
 void load_os_image(const char *path, PhysicalMemoryLayout layout, BootInfo *info)
 {
     std::ifstream f(path, std::ios::binary);
@@ -63,27 +35,43 @@ void load_os_image(const char *path, PhysicalMemoryLayout layout, BootInfo *info
         std::streampos next_sec_ptr = f.tellg();
         f.seekg(sec.file_offset);
 
-        // 计算物理目标地址
-        void *target_phys_addr = (void *)((uintptr_t)layout.base + (uintptr_t)sec.dest_phys_addr);
+        // --- 修正点 1：使用段定义的 dest_phys_addr，不要硬编码 ROOT_PHYS_ADDR ---
+        uintptr_t target_pos = (uintptr_t)layout.base + (uintptr_t)sec.dest_phys_addr;
+        void *target_phys_addr = (void *)target_pos;
 
         // 读取数据到模拟物理内存
         f.read((char *)target_phys_addr, sec.size);
 
-        // 3. 核心逻辑：如果是 ROOT 段，解析入口点
-        if (memcmp(sec.name, "ROOT", 4) == 0)
+        // 3. 核心逻辑处理
+        if (sec.type == (uint32_t)SectionType::ROOT_TASK)
         {
-            uintptr_t entry_offset = get_entry_offset(target_phys_addr);
-            info->root_task_entry = (void (*)(void *, void *))((uintptr_t)target_phys_addr + entry_offset);
+            // --- 修正点 2：直接信任 Header 里的 root_entry_off ---
+            // 注意：root_entry_off 是相对于 ROOT 段起始物理地址的偏移
+            uintptr_t entry_addr = target_pos + header.root_entry_off;
 
-            std::cout << "[Loader] RootTask Entry set to: " << (void *)info->root_task_entry
-                      << " (Offset: " << entry_offset << ")" << std::endl;
+            // --- 修正点 3：增加对齐校验 (必须是偶数，最好 16 字节对齐) ---
+            if (entry_addr % 2 != 0)
+            {
+                std::cerr << "[Loader] FATAL: Misaligned Entry Point: " << (void *)entry_addr << std::endl;
+                // 这里可以选择退出或报错
+            }
+
+            info->root_task_entry = (void (*)(void *, void *))entry_addr;
+
+            uint8_t *code = (uint8_t *)info->root_task_entry;
+            printf("[Loader] Instruction at Entry: %02X %02X %02X %02X\n",
+                   code[0], code[1], code[2], code[3]);
+
+            std::cout << "[Loader] RootTask Loaded at: " << (void *)target_pos
+                      << " | Entry: " << (void *)info->root_task_entry
+                      << " (Offset: " << header.root_entry_off << ")" << std::endl;
         }
-        else if (memcmp(sec.name, "SYSCONF", 7) == 0)
+        else if (sec.type == (uint32_t)SectionType::CONFIG)
         {
             info->config_ptr = target_phys_addr;
         }
 
-        // 跳回到段表位置继续处理下一个
+        // 跳回到段表位置
         f.seekg(next_sec_ptr);
     }
 

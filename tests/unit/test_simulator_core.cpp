@@ -1,4 +1,4 @@
-#include "test.hpp"
+#include "test_framework.hpp"
 #include <simulator/WinCPUEngine.hpp>
 #include <simulator/WinTaskContext.hpp>
 #include <simulator/WinX64Regs.hpp>

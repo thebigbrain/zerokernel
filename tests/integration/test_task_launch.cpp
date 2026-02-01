@@ -2,7 +2,7 @@
 #include "kernel/Kernel.hpp"
 #include "simulator/WinTaskContext.hpp"
 #include "simulator/WinCPUEngine.hpp"
-#include "test.hpp"
+#include "test_framework.hpp"
 
 void actual_dummy_entry() {}
 /**

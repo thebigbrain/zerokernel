@@ -1,77 +1,44 @@
 #pragma once
 
-#include <queue>
-#include "ICPUEngine.hpp"
-#include "task.hpp"
-#include "ObjectFactory.hpp"
+#include "common/BootInfo.hpp"
 #include "ITaskManager.hpp"
-#include <common/Message.hpp>
+#include "IExecutionEngine.hpp"
 #include "MessageBus.hpp"
-#include <common/IUserRuntime.hpp>
-#include <common/BootInfo.hpp>
+#include "ObjectFactory.hpp"
+#include "ICPUEngine.hpp"
 
-class Kernel : public ITaskManager
+class Kernel
 {
 private:
-    BootInfo *_boot_info;
-
-    ICPUEngine *_cpu;
-    Task *_current;
-    Task *_next;
-
-    Task *_idle_task;
-
+    // 基础依赖
     ObjectFactory *_factory;
-    // 假设我们有一个任务链表或数组来管理所有 Task
-    Task *_tasks[32];
-    int _task_count = 0;
-    int _current_index = 0;
+    ICPUEngine *_cpu;
 
-    std::queue<Task *> _ready_queue;
-
+    // 领域组件 (组合优于继承)
+    ITaskManager *_task_manager;
+    IExecutionEngine *_engine;
     MessageBus *_bus;
 
-    static Kernel *instance;
-
-    Task *create_task_skeleton(void (*entry_point)());
+    BootInfo *_boot_info;
 
 public:
-    Kernel(ICPUEngine *cpu, ObjectFactory *factory) : _cpu(cpu), _factory(factory), _current(nullptr), _next(nullptr)
+    Kernel(ICPUEngine *cpu, ObjectFactory *factory)
+        : _cpu(cpu), _factory(factory)
     {
-        if (Kernel::instance)
-        {
-            return;
-        }
-        Kernel::instance = this;
     }
 
-    static Kernel *get_instance()
-    {
-        return instance;
-    }
+    // 设置执行策略（同步测试引擎 or 异步调度引擎）
+    void set_execution_engine(IExecutionEngine *engine) { _engine = engine; }
+
+    // 设置任务管理器实现
+    void set_task_manager(ITaskManager *tm) { _task_manager = tm; }
 
     void bootstrap(BootInfo *info);
 
+    // 领域逻辑：处理系统事件
     void handle_load_task(const Message &msg);
     void handle_event_print(const Message &msg);
 
-    void run_loop();
-
-    // 补全方法：获取指定索引的任务
-    Task *get_ready_task(int index);
-
-    // 协作式调度示例
-    void yield();
-
-    // 动态创建任务并加入队列
-    Task *spawn_task(void (*entry_point)());
-    Task *spawn_fixed_task(void *task_entry, void *config);
-
-    void terminate_current_task() override
-    {
-        // 1. 标记当前任务为销毁状态
-        // 2. 触发 yield() 切换到下一个任务
-        // 3. 这里的逻辑完全不涉及寄存器
-        this->yield();
-    }
+    // 暴露给外部或 Proxy 的接口，转发给 TaskManager
+    ITaskManager *get_task_manager() { return _task_manager; }
 };

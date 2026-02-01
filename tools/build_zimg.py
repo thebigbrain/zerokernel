@@ -27,7 +27,29 @@ HEADER_FMT = "<IIIIQQQ"
 # ZImgSection: name(8s), type(I), offset(I), dest(Q), size(I)
 SECTION_FMT = "<8sIIQI"
 
+
 # --- 2. 核心逻辑 ---
+def get_pe_entry(filename):
+    with open(filename, "rb") as f:
+        data = f.read(1024)
+        if data[:2] != b"MZ":
+            return 0
+
+        # 获取 PE Header 偏移
+        pe_ptr = struct.unpack("<I", data[0x3C:0x40])[0]
+
+        # 验证 PE 签名
+        if data[pe_ptr : pe_ptr + 4] != b"PE\0\0":
+            return 0
+
+        # AddressOfEntryPoint 在可选头偏移 0x28 处
+        # 对于 64 位 PE，可选头紧跟在 File Header (24 bytes) 之后
+        entry_rva = struct.unpack("<I", data[pe_ptr + 0x28 : pe_ptr + 0x2C])[0]
+
+        # --- 调试打印 ---
+        print(f"[Build] Found PE Entry RVA: 0x{entry_rva:X}")
+
+        return entry_rva
 
 
 def build_zimg(output_path, root_bin, extras):
@@ -98,6 +120,11 @@ def build_zimg(output_path, root_bin, extras):
             payload_bin += data
             current_offset += size
 
+    root_entry = get_pe_entry(root_bin)
+    if root_entry % 2 != 0:
+        print(f"[Warning] Misaligned Entry RVA 0x{root_entry:X} detected!")
+        # root_entry = root_entry & ~0xF  # 暂时不要硬改，先看为什么不对
+
     # 5. 构造全局文件头
     header_bin = struct.pack(
         HEADER_FMT,
@@ -105,7 +132,7 @@ def build_zimg(output_path, root_bin, extras):
         1,  # version
         total_header_size,
         len(components),
-        0,  # root_entry_off (默认 0)
+        root_entry,  # root_entry_off (默认 0)
         CONF_PHYS_ADDR,  # config_phys (基准配置地址)
         128 * 1024 * 1024,  # memory_required (128MB)
     )

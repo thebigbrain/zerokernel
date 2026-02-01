@@ -2,7 +2,7 @@
 #include <cstdint>
 #include "kernel/ObjectFactory.hpp"
 #include "simulator/WinTaskContext.hpp"
-#include "test.hpp"
+#include "test_framework.hpp"
 #include <assert.h>
 
 // 全局状态追踪

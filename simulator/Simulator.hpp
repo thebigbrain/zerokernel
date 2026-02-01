@@ -3,7 +3,6 @@
 #include <common/BootInfo.hpp>
 #include <kernel/Memory.hpp>
 #include "kernel/Kernel.hpp"
-#include <common/RootTaskDef.hpp>
 
 void load_os_image(const char *filename, PhysicalMemoryLayout layout, BootInfo *out_info);
 

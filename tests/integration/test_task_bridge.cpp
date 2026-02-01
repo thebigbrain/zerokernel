@@ -1,5 +1,5 @@
 // tests/integration/test_task_bridge.cpp
-#include "test.hpp"
+#include "test_framework.hpp"
 #include <simulator/WinCPUEngine.hpp>
 #include <kernel/MessageBus.hpp>
 

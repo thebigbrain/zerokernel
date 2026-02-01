@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include "kernel/ObjectFactory.hpp"
 
-#include "test.hpp"
+#include "test_framework.hpp"
 
 void test_factory_out_of_memory()
 {

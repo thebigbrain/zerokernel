@@ -49,7 +49,7 @@ void WinCPUEngine::transit(ITaskContext *current, ITaskContext *next)
     }
 }
 
-void WinCPUEngine::execute(ITaskContext *context)
+void WinCPUEngine::switch_to(ITaskContext *context)
 {
     transit(nullptr, context);
 }
