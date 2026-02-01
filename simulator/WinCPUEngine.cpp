@@ -2,8 +2,7 @@
 #include <new>
 #include <iostream>
 #include "WinTaskContext.hpp"
-
-extern "C" void context_switch_asm(void **old_sp, void *new_sp);
+#include "asmdefs.hpp"
 
 // 返回 Windows 模拟环境下的上下文结构大小
 size_t WinCPUEngine::get_context_size() const
@@ -25,16 +24,32 @@ ITaskContext *WinCPUEngine::create_context_at(void *address)
 
 void WinCPUEngine::transit(ITaskContext *current, ITaskContext *next)
 {
-    // 获取具体实现的成员变量 sp 的地址
-    // 强制转换为 WinTaskContext 是安全的，因为这个函数位于 arch 模块内
-    WinTaskContext *curWin = static_cast<WinTaskContext *>(current);
+    // 目标上下文必须存在
+    if (next == nullptr)
+        return;
+
     WinTaskContext *nxtWin = static_cast<WinTaskContext *>(next);
 
-    context_switch_asm(&curWin->sp, nxtWin->sp);
+    if (current == nullptr)
+    {
+        // --- 场景：第一次启动任务 ---
+        // 我们不需要保存任何当前寄存器，只需将 CPU 的 SP 切换到目标任务，
+        // 然后执行弹栈（恢复现场）逻辑。
+        auto sp = nxtWin->get_stack_pointer();
+        context_load_asm(sp);
+    }
+    else
+    {
+        // --- 场景：正常的任务切换 ---
+        WinTaskContext *curWin = static_cast<WinTaskContext *>(current);
+
+        // 保存当前 SP 到 curWin->sp，并切换到 nxtWin->sp
+        auto curSp = curWin->get_stack_pointer();
+        context_switch_asm(&curSp, nxtWin->get_stack_pointer());
+    }
 }
 
 void WinCPUEngine::execute(ITaskContext *context)
 {
-    void *dummy;
-    context_switch_asm(&dummy, static_cast<WinTaskContext *>(context)->sp);
+    transit(nullptr, context);
 }

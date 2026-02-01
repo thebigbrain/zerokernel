@@ -19,7 +19,10 @@ public:
     KObjectPool(ObjectFactory *f) : _factory(f)
     {
         // 确保空间足够存放指针，用于构建 FreeList
-        _object_size = sizeof(T) > sizeof(FreeNode) ? sizeof(T) : sizeof(FreeNode);
+        size_t base_size = sizeof(T) > sizeof(FreeNode) ? sizeof(T) : sizeof(FreeNode);
+
+        // 强制 16 字节对齐
+        _object_size = (base_size + 15ULL) & ~15ULL;
     }
 
     T *allocate()

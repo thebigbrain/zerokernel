@@ -11,6 +11,8 @@ private:
     ListNode<T> *_tail = nullptr;
     KObjectPool<ListNode<T>> *_pool;
 
+    uint32_t _size = 0;
+
 public:
     // 强制要求传入对象池
     KPoolList(KObjectPool<ListNode<T>> *pool) : _pool(pool) {}
@@ -31,6 +33,8 @@ public:
             _tail->next = node;
             _tail = node;
         }
+
+        _size++;
     }
 
     // 清空列表并将所有节点还给对象池
@@ -44,6 +48,7 @@ public:
             curr = next;
         }
         _head = _tail = nullptr;
+        _size = 0;
     }
 
     // 提供给 MessageBus 遍历使用的裸指针接口
@@ -52,4 +57,9 @@ public:
 
     // 简单判断是否为空
     bool empty() const { return _head == nullptr; }
+
+    uint32_t size() const
+    {
+        return _size;
+    }
 };

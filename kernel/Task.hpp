@@ -51,20 +51,13 @@ public:
 
     void prepare(void (*entry)(), void *stack_top)
     {
-        // 确保 stack_top 是 8 字节对齐的（x64 必须）
+        // 只负责对齐最初的栈顶（虽然底层也会做，但这里做一次更安全）
         uintptr_t top = (uintptr_t)stack_top;
-        top &= ~0x7ULL;
+        top &= ~0xFULL; // 调整为 16 字节对齐
 
-        uintptr_t *stack = (uintptr_t *)top;
-
-        // 1. 压入退出路由器 (在 top 之下写入)
-        // 此时写入的是栈的最顶端槽位
-        stack[-1] = (uintptr_t)task_exit_router;
-
-        // 2. 将调整后的栈顶交给 Context
-        // 下一次压栈会从 stack[-2] 开始
-        void *adjusted_stack = (void *)&stack[-1];
-        _context->prepare(entry, adjusted_stack);
+        // 将入口点和退出路由器都传给 Context
+        // 这样 Context 知道如何根据 ABI（如 x64, ARM）摆放它们
+        _context->prepare(entry, (void *)top, task_exit_router);
     }
 
     void set_parameter(int index, uintptr_t value)

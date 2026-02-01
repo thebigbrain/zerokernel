@@ -31,15 +31,9 @@ private:
 
     MessageBus *_bus;
 
-    uint32_t _next_available_id = 100; // 0-99 留给系统预留
-
-    uint32_t generate_unique_id()
-    {
-        // 在真实多核环境下，这里需要使用 std::atomic 或关中断保护
-        return _next_available_id++;
-    }
-
     static Kernel *instance;
+
+    Task *create_task_skeleton(void (*entry_point)());
 
 public:
     Kernel(ICPUEngine *cpu, ObjectFactory *factory) : _cpu(cpu), _factory(factory), _current(nullptr), _next(nullptr)

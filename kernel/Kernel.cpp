@@ -1,3 +1,4 @@
+#include <cassert>
 #include "Kernel.hpp"
 #include "ITaskManager.hpp"
 #include "KernelProxy.hpp"
@@ -40,8 +41,8 @@ void Kernel::bootstrap(BootInfo *info)
 
     void *bus_mem = _factory->allocate_raw(sizeof(MessageBus));
     this->_bus = new (bus_mem) MessageBus(_factory);
-    _bus->subscribe(MessageType::SYS_LOAD_TASK, BIND_KERNEL_CB(Kernel, handle_load_task, this));
 
+    _bus->subscribe(MessageType::SYS_LOAD_TASK, BIND_KERNEL_CB(Kernel, handle_load_task, this));
     _bus->subscribe(MessageType::EVENT_PRINT, BIND_KERNEL_CB(Kernel, handle_event_print, this));
 
     // 直接拉起 RootTask
@@ -92,77 +93,111 @@ void Kernel::run_loop()
     }
 }
 
-Task *Kernel::spawn_task(void (*entry_point)())
+Task *Kernel::create_task_skeleton(void (*entry_point)())
 {
     if (_task_count >= 64)
         return nullptr;
 
-    // 1. 架构无关地创建 Context
+    // 1. 创建架构相关的上下文 (Context)
     size_t ctx_size = _cpu->get_context_size();
     void *ctx_mem = _factory->allocate_raw(ctx_size);
     ITaskContext *ctx = _cpu->create_context_at(ctx_mem);
 
-    // 2. 创建 Task 对象
-    Task *newTask = _factory->create<Task>(_task_count, ctx);
-    newTask->init_stack(_factory, 64 * 1024);
+    assert(ctx != nullptr);
 
-    // 4. 初始化（在之前的讨论中，这里会填入 entry 和 exit_gate）
-    newTask->prepare(entry_point, newTask->get_stack_top());
+    // 2. 创建 Task 对象 (统一使用 _task_count 作为内部 ID)
+    uint32_t tid = _task_count;
+    Task *t = _factory->create<Task>(tid, ctx);
 
-    // 5. 注册到就绪数组
-    _tasks[_task_count++] = newTask;
+    // 3. 分配并初始化栈
+    t->init_stack(_factory, 64 * 1024);
 
-    return newTask;
+    // 4. 准备入口地址和栈帧
+    t->prepare(entry_point, t->get_stack_top());
+
+    return t;
 }
 
-Task *Kernel::spawn_fixed_task(
-    void *task_entry, void *config)
+// 场景 1：创建普通内核任务（无参数）
+Task *Kernel::spawn_task(void (*entry_point)())
 {
-    // 1. 生成唯一 ID (假设 RootTask 始终为 1)
-    uint32_t tid = this->generate_unique_id();
+    Task *t = create_task_skeleton(entry_point);
+    if (!t)
+        return nullptr;
 
-    // 2. 在内核受控内存中实例化代理
-    // 注意：proxy 的生命周期由内核通过 ObjectFactory 管理
+    // 注册并递增计数器
+    _tasks[_task_count++] = t;
+    _ready_queue.push(t); // 确保 yield 能看到它
+
+    return t;
+}
+
+// 场景 2：创建固定任务（如 RootTask，带 Proxy 和 Config 参数）
+Task *Kernel::spawn_fixed_task(void *task_entry, void *config)
+{
+    // 转换为函数指针并创建骨架
+    Task *t = create_task_skeleton((void (*)())task_entry);
+    if (!t)
+        return nullptr;
+
+    // 1. 特有的逻辑：实例化 Proxy
     KernelProxy *proxy = _factory->create<KernelProxy>(_bus, this);
 
-    // 获取架构相关的 Context 处理器
-    void *ctx_mem = _factory->allocate_raw(_cpu->get_context_size());
-    ITaskContext *ctx = _cpu->create_context_at(ctx_mem);
-
-    // 5. 封装为 Task 对象
-    Task *t = _factory->create<Task>(tid, ctx);
-    t->init_stack(_factory, 64 * 1024); // 封装了 allocate_raw 和指针运算
-
-    // 设置任务入口并平衡栈帧（压入 task_exit_gate）
-    t->prepare((void (*)())task_entry, t->get_stack_top());
+    // 2. 特有的逻辑：填充参数 (ABI 相关)
     t->set_parameter(0, (uintptr_t)proxy);
     t->set_parameter(1, (uintptr_t)config);
 
-    // 6. 加入就绪队列
-    this->_tasks[tid] = t;
-    this->_ready_queue.push(t);
+    // 3. 注册、递增计数器并入队
+    _tasks[_task_count++] = t;
+    _ready_queue.push(t);
 
     return t;
 }
 
 void Kernel::yield()
 {
-    if (_task_count < 2)
-        return;
-
-    int old_index = _current_index;
-    _current_index = (_current_index + 1) % _task_count;
-
-    Task *prev = _tasks[old_index];
-    Task *next = _idle_task;
-
-    if (!_ready_queue.empty())
+    // 1. 基础安全检查：如果没有任务可跑，直接回退
+    if (_ready_queue.empty())
     {
-        next = _ready_queue.front();
-        _ready_queue.pop();
+        return;
     }
 
-    _cpu->transit(prev->get_context(), next->get_context());
+    // 2. 获取下一个要跑的任务
+    Task *next = _ready_queue.front();
+    _ready_queue.pop();
+
+    // 3. 记录旧任务（可能是 nullptr，代表内核启动前的初始状态）
+    Task *prev = _current;
+
+    // 4. 更新当前指向
+    _current = next;
+
+    // 5. 判定切换逻辑
+    if (prev == nullptr)
+    {
+        // --- 场景 A：内核启动后的第一次调度 ---
+        // 此时不需要保存旧上下文（因为没有旧任务在跑）
+        // 直接“跳入”新任务的上下文执行
+        auto ctx = next->get_context();
+        _cpu->execute(ctx);
+    }
+    else
+    {
+        // --- 场景 B：正常任务切换 ---
+        // 检查是否切换到了自己（队列里只有自己时）
+        if (prev == next)
+        {
+            _ready_queue.push(next); // 放回队列
+            return;
+        }
+
+        // 将旧任务放回就绪队列尾部
+        _ready_queue.push(prev);
+
+        // 执行架构相关的上下文切换
+        // 保存 prev 的状态，恢复 next 的状态
+        _cpu->transit(prev->get_context(), next->get_context());
+    }
 }
 
 Task *Kernel::get_ready_task(int index)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ObjectFactory.hpp"
+
 template <typename T>
 struct ListNode
 {

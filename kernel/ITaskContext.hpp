@@ -12,7 +12,7 @@ public:
     virtual ~ITaskContext() = default;
 
     // 内核只调用这些具有语义的方法
-    virtual void prepare(void (*entry)(), void *stack_top) = 0;
+    virtual void prepare(void (*entry)(), void *stack_top, void (*exit_router)()) = 0;
 
     virtual void set_parameter(int index, uintptr_t value) = 0;
 

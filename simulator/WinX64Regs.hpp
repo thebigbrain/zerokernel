@@ -4,15 +4,14 @@
 #pragma pack(push, 1)
 struct WinX64Regs
 {
-    // 这些成员对应汇编中的 pop 顺序（从小到大地址）
-    uint64_t r15;
-    uint64_t r14;
-    uint64_t r13;
-    uint64_t r12;
-    uint64_t rsi;
-    uint64_t rdi;
-    uint64_t rbx;
-    uint64_t rbp;
-    uint64_t rip; // 对应 ret 指令从栈顶弹出的返回地址
+    // 这里的顺序必须严格对应 context_switch_asm 中 pop 的反向顺序
+    // 假设你的汇编是：pop rbp, rbx, rdi, rsi, r12-r15, rdx, rcx
+    uint64_t rcx; // sp 指向这里
+    uint64_t rdx;
+    uint64_t r8; // 建议加上，符合 Windows x64 传参规范
+    uint64_t r9; // 建议加上
+    uint64_t r15, r14, r13, r12, rsi, rdi, rbx, rbp;
+
+    uint64_t rip; // 结构体末尾，地址最高
 };
 #pragma pack(pop)

@@ -10,7 +10,7 @@
 
 struct SubscriberEntry
 {
-    uint32_t type;
+    MessageType type;
     KList<ITask *> *tasks;
     KList<KernelCallback> *funcs;
 };
@@ -33,16 +33,13 @@ public:
     MessageBus(ObjectFactory *f) : _factory(f)
     {
         // 1. 初始化消息节点对象池
-        void *pool_mem = f->allocate_raw(sizeof(KObjectPool<ListNode<Message>>));
-        _msg_node_pool = new (pool_mem) KObjectPool<ListNode<Message>>(f);
+        _msg_node_pool = f->create<KObjectPool<ListNode<Message>>>(f);
 
         // 2. 初始化待处理消息队列（传入对象池）
-        void *list_mem = f->allocate_raw(sizeof(KList<Message>));
-        _pending_queue = new (list_mem) KPoolList<Message>(_msg_node_pool);
+        _pending_queue = f->create<KPoolList<Message>>(_msg_node_pool);
 
         // 3. 初始化注册表（注册表节点较少，可以使用默认工厂分配或单独建池）
-        void *reg_mem = f->allocate_raw(sizeof(KList<SubscriberEntry *>));
-        _registry = new (reg_mem) KList<SubscriberEntry *>(f);
+        _registry = f->create<KList<SubscriberEntry *>>(f);
     }
 
     // 核心：由内核调度器（如每个 Tick 或 Idle 时）调用
@@ -79,14 +76,14 @@ public:
     }
 
     // 订阅接口：任务订阅
-    void subscribe(uint32_t type, ITask *task)
+    void subscribe(MessageType type, ITask *task)
     {
         SubscriberEntry *entry = find_or_create_entry(type);
         entry->tasks->push_back(task);
     }
 
     // 订阅接口：内核函数订阅
-    void subscribe(uint32_t type, KernelCallback callback)
+    void subscribe(MessageType type, KernelCallback callback)
     {
         SubscriberEntry *entry = find_or_create_entry(type);
 
@@ -99,8 +96,13 @@ public:
         _pending_queue->push_back(msg);
     }
 
+    uint32_t get_pending_count()
+    {
+        return _pending_queue->size();
+    }
+
 private:
-    SubscriberEntry *find_or_create_entry(uint32_t type)
+    SubscriberEntry *find_or_create_entry(MessageType type)
     {
         SubscriberEntry *e = find_entry(type);
         if (e)
@@ -122,7 +124,7 @@ private:
         return e;
     }
 
-    SubscriberEntry *find_entry(uint32_t type)
+    SubscriberEntry *find_entry(MessageType type)
     {
         auto node = _registry->begin();
         auto end_node = _registry->end();

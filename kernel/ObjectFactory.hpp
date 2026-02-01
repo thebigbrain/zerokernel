@@ -11,8 +11,7 @@ private:
     size_t _remaining;
 
 public:
-    ObjectFactory(PhysicalMemoryLayout mem)
-        : _current_p((uint8_t *)mem.base), _remaining(mem.size) {}
+    ObjectFactory(PhysicalMemoryLayout mem);
 
     // 泛型对象创建：在物理内存上原位构造
     template <typename T, typename... Args>
@@ -20,13 +19,15 @@ public:
     {
         static_assert(!std::is_abstract_v<T>, "Cannot create abstract class with ObjectFactory");
 
-        if (_remaining < sizeof(T))
+        // 1. 调用已经写好的对齐分配逻辑
+        // allocate_raw 会处理 _current_p 的对齐偏移，并扣除 _remaining
+        void *mem = this->allocate_raw(sizeof(T));
+
+        if (!mem)
             return nullptr;
 
-        T *obj = new (_current_p) T(std::forward<Args>(args)...);
-        _current_p += sizeof(T);
-        _remaining -= sizeof(T);
-        return obj;
+        // 2. 在对齐后的内存上构造对象
+        return new (mem) T(std::forward<Args>(args)...);
     }
 
     void deallocate(void *ptr)
@@ -35,13 +36,5 @@ public:
     }
 
     // 申请一块裸内存（用于栈）
-    void *allocate_raw(size_t size)
-    {
-        if (_remaining < size)
-            return nullptr;
-        void *ptr = _current_p;
-        _current_p += size;
-        _remaining -= size;
-        return (uint8_t *)ptr; // 返回栈顶
-    }
+    void *ObjectFactory::allocate_raw(size_t size);
 };

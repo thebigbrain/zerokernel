@@ -1,11 +1,20 @@
-enable_language(ASM_MASM)
+# enable_language(ASM_MASM)
 
-add_executable(simulator 
-    main.cpp 
+add_library(simulator_common 
     WinCPUEngine.hpp
     WinCPUEngine.cpp 
     context_switch.asm
     IdleTask.hpp
+    loader.cpp
+    Simulator.hpp
+    WinTaskContext.hpp
+    WinTaskContext.cpp
 )
 
-target_link_libraries(simulator PRIVATE kernel)
+add_executable(simulator
+    main.cpp 
+)
+
+target_link_libraries(simulator PRIVATE kernel simulator_common)
+
+add_definitions(-DIMG_PATH="${FINAL_IMAGE}")
