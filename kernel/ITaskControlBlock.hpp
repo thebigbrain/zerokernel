@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ITaskContext.hpp"
-#include "TaskState.hpp"
-#include "Mailbox.hpp"
+#include "common/TaskTypes.hpp"
+#include <common/IUserRuntime.hpp>
 
 /**
  * TCB (Task Control Block) 抽象
@@ -15,31 +15,14 @@ public:
 
     virtual uint32_t get_id() const = 0;
 
-    // 获取/设置该任务的物理上下文
-    virtual ITaskContext *get_context() = 0;
-
     // 状态管理
-    virtual void set_state(TaskState state) = 0;
     virtual TaskState get_state() const = 0;
+    virtual void set_state(TaskState state) = 0;
 
-    // 只有当任务是“活动对象”时才需要这个，但在微内核中，
-    // 我们更倾向于通过 MessageBus 直接投递到任务的邮箱，
-    // 而不是让 TCB 暴露这些方法。
-    virtual Mailbox *get_mailbox() = 0;
+    // 领域逻辑：每个可执行的任务必然关联其执行信息
+    // 这样 ExecutionEngine 拿到 ITCB 后，可以直接通过领域模型获取信息
+    virtual const TaskExecutionInfo &get_execution_info() const = 0;
+    virtual const TaskResourceConfig &get_resource_config() const = 0;
 
-    /**
-     * 领域逻辑：向任务投递消息
-     * 这个方法是 MessageBus 最终调用的地方
-     */
-    void deliver(const Message &msg)
-    {
-        if (get_mailbox()->push(msg))
-        {
-            // 如果任务处于 BLOCKED 状态，投递后应由 ITaskManager 唤醒
-            if (get_state() == TaskState::BLOCKED)
-            {
-                set_state(TaskState::READY);
-            }
-        }
-    }
+    virtual ITaskContext *get_context() const = 0;
 };

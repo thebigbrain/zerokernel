@@ -1,7 +1,32 @@
 #include "WinTaskContext.hpp"
 #include <cstring>
 
-void WinTaskContext::prepare(void (*entry)(), void *stack_top, void (*exit_router)())
+extern "C" void context_switch_asm(void **old_sp, void *new_sp);
+extern "C" void context_load_asm(void *sp);
+
+void WinTaskContext::transit_to(ITaskContext *target)
+{
+    // 强制转换为具体实现类以获取其 sp
+    auto *next_ctx = static_cast<WinTaskContext *>(target);
+
+    // 调用汇编：
+    // 第一个参数 (RCX): 当前 sp 成员变量的地址 (&this->sp)
+    // 第二个参数 (RDX): 目标 sp 的值 (next_ctx->sp)
+    context_switch_asm(reinterpret_cast<void **>(&this->sp), next_ctx->sp);
+}
+
+void WinTaskContext::jump_to()
+{
+    // 直接丢弃当前上下文，加载 sp
+    context_load_asm(this->sp);
+}
+
+size_t WinTaskContext::get_context_size() const
+{
+    return sizeof(WinX64Regs);
+}
+
+void WinTaskContext::setup_flow(void (*entry)(), void *stack_top, void (*exit_router)())
 {
     // 1. 初始对齐 (16n)
     uintptr_t curr = reinterpret_cast<uintptr_t>(stack_top) & ~0xFULL;
@@ -25,7 +50,7 @@ void WinTaskContext::prepare(void (*entry)(), void *stack_top, void (*exit_route
     update_regs_from_args();
 }
 
-void WinTaskContext::set_parameter(int index, uintptr_t value)
+void WinTaskContext::load_argument(size_t index, uintptr_t value)
 {
     if (index < 0 || index >= 4)
         return; // 防止越界
@@ -33,7 +58,7 @@ void WinTaskContext::set_parameter(int index, uintptr_t value)
     // 1. 暂存在数组中
     m_args[index] = value;
 
-    // 2. 如果 sp 已经 prepare 好了，直接同步到内存镜像
+    // 2. 如果 sp 已经 setup_flow 好了，直接同步到内存镜像
     if (this->sp)
     {
         update_regs_from_args();

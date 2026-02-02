@@ -25,7 +25,7 @@ static uint8_t mock_root_task_bin[] = {
  */
 void setup_instruction_test()
 {
-    info->root_task_entry = (void (*)(void *, void *))(uintptr_t)mock_root_task_bin;
+    info->root_task_entry = (void (*)(void *))(uintptr_t)mock_root_task_bin;
 }
 /**
  * Test 20: 验证入口点指令的物理存在与合法性

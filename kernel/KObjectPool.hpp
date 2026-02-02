@@ -12,11 +12,11 @@ private:
     };
 
     FreeNode *_free_list = nullptr;
-    ObjectFactory *_factory;
+    ObjectFactory *_obj_factory;
     size_t _object_size;
 
 public:
-    KObjectPool(ObjectFactory *f) : _factory(f)
+    KObjectPool(ObjectFactory *f) : _obj_factory(f)
     {
         // 确保空间足够存放指针，用于构建 FreeList
         size_t base_size = sizeof(T) > sizeof(FreeNode) ? sizeof(T) : sizeof(FreeNode);
@@ -37,7 +37,7 @@ public:
         }
 
         // 空闲链表没了，向工厂申请新的
-        return (T *)_factory->allocate_raw(_object_size);
+        return (T *)_obj_factory->allocate_raw(_object_size);
     }
 
     void deallocate(T *ptr)

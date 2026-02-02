@@ -19,10 +19,24 @@ public:
     // 构造函数
     WinTaskContext() = default;
 
-    void set_parameter(int index, uintptr_t value) override;
+    size_t get_context_size() const;
+
+    /**
+     * 核心动作：从当前执行流切换到另一个执行流
+     * @param target 目标上下文
+     * 内部实现：保存当前寄存器到 this，从 target 恢复寄存器并跳转
+     */
+    void transit_to(ITaskContext *target);
+
+    /**
+     * 初始启动：不需要保存，直接加载 target 的状态
+     */
+    void jump_to();
+
+    void load_argument(size_t index, uintptr_t value) override;
 
     // 移除多余的类名前缀
-    void prepare(void (*entry)(), void *stack_top, void (*exit_router)()) override;
+    void setup_flow(void (*entry)(), void *stack_top, void (*exit_router)()) override;
 
     void *get_stack_pointer() const override { return sp; }
 };

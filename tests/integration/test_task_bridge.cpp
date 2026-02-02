@@ -2,85 +2,92 @@
 #include "test_framework.hpp"
 #include <simulator/WinCPUEngine.hpp>
 #include <kernel/MessageBus.hpp>
+#include <simulator/WinTaskContext.hpp>
 
+void test_shadow_space_presence()
+{
+    // 直接使用具体的实现类进行测试
+    WinTaskContext ctx;
+
+    // Windows x64 必须 16 字节对齐
+    alignas(16) uint8_t stack[1024];
+    void *stack_top = stack + 1024;
+
+    // 修复：模拟设置流。注意：WinTaskContext 内部现在应该负责 Shadow Space
+    ctx.setup_flow((void (*)())0x123, stack_top, (void (*)())0x456);
+
+    // 获取 RSP
+    uintptr_t sp = (uintptr_t)ctx.get_stack_pointer();
+
+    // Windows x64 ABI 核心：
+    // [High] stack_top
+    // [....] Return Address (8 bytes)
+    // [Low ] Shadow Space (32 bytes) <-- RSP 应该在这里或之下
+    uintptr_t stack_limit = (uintptr_t)stack_top;
+
+    // 计算从 RSP 到 stack_top 的总空间
+    // 扣除掉返回地址占用的 8 字节，剩下的必须能够容纳 32 字节 Shadow Space
+    if (stack_limit - (sp + 8) < 32)
+    {
+        throw std::runtime_error("Shadow space (32 bytes) is missing! Current offset: " + std::to_string(stack_limit - sp));
+    }
+}
+
+// 修复 2: 强制 16 字节对齐检测
+void test_object_alignment_strict()
+{
+    uint8_t *buf = (uint8_t *)malloc(2048);
+    // 确保基地址是对齐的，方便测试分配器算法
+    uintptr_t aligned_base = ((uintptr_t)buf + 15) & ~15;
+    ObjectFactory factory({(void *)aligned_base, 1024});
+
+    for (int i = 0; i < 10; ++i)
+    {
+        // 申请不同大小的空间，验证分配器是否强制补齐到 16 字节
+        void *p = factory.allocate_raw(i + 1);
+        if ((uintptr_t)p % 16 != 0)
+        {
+            free(buf);
+            throw std::runtime_error("Alignment violated for size " + std::to_string(i + 1));
+        }
+    }
+    free(buf);
+}
+
+// 修复 3: 模拟 Proxy 调用的完整性
 void test_task_proxy_call_integrity()
 {
-    // 1. 初始化环境
-    uint8_t *fake_phys = (uint8_t *)malloc(1024 * 1024);
-    PhysicalMemoryLayout layout{fake_phys, 1024 * 1024};
-    ObjectFactory factory(layout);
+    // 使用 malloc 模拟物理内存
+    void *fake_phys = malloc(1024 * 1024);
+    ObjectFactory factory({fake_phys, 1024 * 1024});
 
-    // 2. 创建内核组件
+    // 创建 MessageBus
     MessageBus *bus = factory.create<MessageBus>(&factory);
 
-    // 3. 模拟 Proxy 传递给任务的过程
-    // 这里的 bus 指针就是将来要通过 RCX 传给 root_task 的值
+    // 模拟 Task 的 RCX 传参
     void *task_arg_proxy = (void *)bus;
 
-    // 4. 模拟任务内部的动作
-    // 之前你崩在 publish，这里我们模拟任务内部调用 publish
     try
     {
         Message msg;
         msg.type = static_cast<MessageType>(0x55);
 
-        // 验证这个指针在被当做 proxy 传递后是否依然能正常操作其内部成员
+        // 核心检查：通过 proxy 指针调用方法
         MessageBus *proxy_bus = static_cast<MessageBus *>(task_arg_proxy);
         proxy_bus->publish(msg);
 
         if (proxy_bus->get_pending_count() != 1)
         {
-            throw std::runtime_error("Message was lost through proxy call");
+            throw std::runtime_error("Message count mismatch");
         }
     }
     catch (...)
     {
-        throw std::runtime_error("Crash detected during proxy-based publish!");
+        free(fake_phys);
+        throw;
     }
 
     free(fake_phys);
-}
-
-void test_shadow_space_presence()
-{
-    WinCPUEngine cpu;
-    void *ctx_mem = malloc(cpu.get_context_size());
-    ITaskContext *ctx = cpu.create_context_at(ctx_mem);
-
-    uint8_t stack[1024];
-    void *stack_top = stack + 1024;
-
-    ctx->prepare((void (*)())0x123, stack_top, (void (*)())0x456);
-
-    // 获取当前模拟的 RSP
-    uintptr_t sp = (uintptr_t)ctx->get_stack_pointer();
-
-    // 在 Windows x64 ABI 中，RSP 指向返回地址。
-    // 返回地址之上（高地址）必须至少有 32 字节的空间。
-    uintptr_t shadow_bottom = sp + 8;
-    uintptr_t stack_limit = (uintptr_t)stack_top;
-
-    if (stack_limit - shadow_bottom < 32)
-    {
-        throw std::runtime_error("Shadow space (32 bytes) is missing in stack frame!");
-    }
-
-    free(ctx_mem);
-}
-
-void test_object_alignment_strict()
-{
-    uint8_t buf[1024];
-    ObjectFactory factory({buf, 1024});
-
-    for (int i = 0; i < 10; ++i)
-    {
-        void *p = factory.allocate_raw(sizeof(uint64_t)); // 申请小空间
-        if ((uintptr_t)p % 16 != 0)
-        {
-            throw std::runtime_error("Strict 16-byte alignment violated!");
-        }
-    }
 }
 
 void test_task_proxy_bridge_enhanced()

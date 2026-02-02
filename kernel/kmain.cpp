@@ -8,8 +8,13 @@
 #include "AsyncSchedulingEngine.hpp"
 #include "Memory.hpp"
 #include "Kernel.hpp"
+#include "KernelProxy.hpp"
+#include "SimpleTaskFactory.hpp"
+#include "ICPUEngine.hpp"
 
-extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu)
+extern "C" void task_exit_router();
+
+extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu, ITaskContextFactory *ctx_factory)
 {
     // 1. 在内存头部“原地”构建工厂
     // 它是整个内核宇宙的“大爆炸”起点
@@ -21,8 +26,11 @@ extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cp
 
     // 3. 创建核心组件
     // 这些组件现在都受 ObjectFactory 管理，内存可追踪
-    SimpleTaskManager *tm = factory->create<SimpleTaskManager>(factory, cpu, &info);
-    AsyncSchedulingEngine *engine = factory->create<AsyncSchedulingEngine>(tm, cpu);
+    ITaskControlBlockFactory *tcb_factory = factory->create<SimpleTaskFactory>(factory, task_exit_router);
+    ITaskManager *tm = factory->create<SimpleTaskManager>(factory, ctx_factory, tcb_factory);
+    IExecutionEngine *engine = factory->create<AsyncSchedulingEngine>(tm);
+    MessageBus *bus = factory->create<MessageBus>(factory);
+    IUserRuntime *rt = factory->create<KernelProxy>(bus, tm);
 
     // 4. 创建内核实例
     Kernel *kernel = factory->create<Kernel>(cpu, factory);
@@ -30,8 +38,12 @@ extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cp
     // 5. 声明式注入依赖
     kernel->set_task_manager(tm);
     kernel->set_execution_engine(engine);
+    kernel->set_message_bus(bus);
+    kernel->set_user_runtime(rt);
+
+    kernel->set_boot_info(&info);
 
     // 6. 冷启动：进入 bootstrap 流程
     // 这是一个单向过程，如果是异步引擎，将永不返回
-    kernel->bootstrap(&info);
+    kernel->bootstrap();
 }

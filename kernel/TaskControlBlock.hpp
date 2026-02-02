@@ -9,54 +9,44 @@
 class TaskControlBlock : public ITaskControlBlock
 {
 private:
+    // 1. 基础属性
     uint32_t _id;
     TaskState _state;
-    ITaskContext *_context; // 体系结构相关的上下文句柄
-    Mailbox _mailbox;       // 每个任务自带的信箱
+
+    // 2. 硬件资源上下文 (注入的执行机制)
+    ITaskContext *_context;
+
+    // 3. 领域模型 (直接组合)
+    TaskExecutionInfo _exec_info;   // 执行意图：去哪跑，带什么参数
+    TaskResourceConfig _res_config; // 资源约束：优先级，栈大小
 
 public:
-    /**
-     * 构造函数：由 ObjectFactory 自动调用
-     * @param id 任务 ID
-     * @param context 已分配并初始化的体系结构上下文
-     */
-    TaskControlBlock(uint32_t id, ITaskContext *context)
-        : _id(id),
-          _state(TaskState::CREATED),
-          _context(context),
-          _mailbox(32) // 默认容量 32 条消息
+    TaskControlBlock(
+        uint32_t id,
+        ITaskContext *ctx,
+        const TaskExecutionInfo &exec_info,
+        const TaskResourceConfig &res_config) : _id(id),
+                                                _context(ctx),
+                                                _state(TaskState::READY),
+                                                _exec_info(exec_info),
+                                                _res_config(res_config) {}
+
+    // 实现接口：获取执行信息
+    const TaskExecutionInfo &get_execution_info() const override
     {
+        return _exec_info;
     }
 
-    virtual ~TaskControlBlock()
+    // 实现接口：获取资源配置
+    const TaskResourceConfig &get_resource_config() const override
     {
-        // 注意：_context 的内存通常由 ObjectFactory 管理并统一回收
+        return _res_config;
     }
 
-    // --- 接口实现 ---
+    ITaskContext *get_context() const override { return _context; }
 
-    uint32_t get_id() const override
-    {
-        return _id;
-    }
+    uint32_t get_id() const override { return _id; }
+    TaskState get_state() const override { return _state; }
 
-    void set_state(TaskState state) override
-    {
-        _state = state;
-    }
-
-    TaskState get_state() const override
-    {
-        return _state;
-    }
-
-    ITaskContext *get_context() override
-    {
-        return _context;
-    }
-
-    Mailbox *get_mailbox() override
-    {
-        return &_mailbox;
-    }
+    void set_state(TaskState state) override { _state = state; }
 };

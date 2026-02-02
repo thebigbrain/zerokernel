@@ -4,8 +4,7 @@
 #include <common/Message.hpp>
 #include <common/BootInfo.hpp>
 #include "ITaskControlBlock.hpp"
-
-extern "C" void task_exit_router();
+#include <common/TaskTypes.hpp>
 
 /**
  * 任务管理器接口：定义了任务的完整生命周期管理行为
@@ -20,23 +19,18 @@ public:
      * 原先的 spawn_task：创建一个纯粹的任务实体
      * 职责：分配 TCB、栈、初始化上下文，并将其加入就绪队列
      */
-    virtual ITaskControlBlock *spawn_task(void *entry_point) = 0;
-
-    /**
-     * 将 spawn_fixed_task 提升为任务管理器的核心接口
-     * 职责：分配 TCB、分配栈、初始化上下文、存入任务列表
-     */
-    virtual void spawn_fixed_task(void *entry, void *config, void *proxy) = 0;
+    virtual ITaskControlBlock *spawn_task(
+        void *entry,
+        TaskPriority priority = TaskPriority::NORMAL,
+        void *config = nullptr) = 0;
 
     /**
      * 业务接口：从内核消息解析意图并创建任务
      */
     virtual void spawn_task_from_message(const Message &msg) = 0;
 
-    /**
-     * 获取启动信息，供引擎决定如何加载初始任务
-     */
-    virtual BootInfo *get_boot_info() = 0;
+    virtual ITaskControlBlock *get_current_task() const = 0;
+    virtual size_t get_task_count() const = 0;
 
     /**
      * 核心退出行为：由当前正在运行的任务通过特定路由调用
@@ -48,14 +42,14 @@ public:
     virtual void terminate_current_task() = 0;
 
     /**
-     * 任务注册：由 Loader 或系统调用触发
+     * 任务注册：将创建好的控制块纳入管理器追踪范围
      */
-    virtual void register_task(uint32_t task_id, void *task_ptr) = 0;
+    virtual void register_task(ITaskControlBlock *tcb) = 0;
 
     /**
-     * 获取任务实例：用于消息路由或状态查询
+     * 获取任务实例：返回通用控制接口
      */
-    virtual void *get_task(uint32_t task_id) = 0;
+    virtual ITaskControlBlock *get_task(uint32_t task_id) = 0;
 
     /**
      * 协作式调度：由 Task 主动让出执行权
@@ -72,5 +66,5 @@ public:
     /**
      * 状态更新接口：当任务让出 CPU 或被抢占时，将其重新放回队列
      */
-    virtual void make_task_ready(ITaskControlBlock *task) = 0;
+    virtual void make_task_ready(ITaskControlBlock *tcb) = 0;
 };

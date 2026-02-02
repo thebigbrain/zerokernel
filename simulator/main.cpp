@@ -5,10 +5,12 @@
 #include "Simulator.hpp"
 #include "WinCPUEngine.hpp"
 #include "IdleTask.hpp"
+#include "WinTaskContextFactory.hpp"
+
 #include <kernel/AsyncSchedulingEngine.hpp>
 #include <kernel/SimpleTaskManager.hpp>
 
-extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu);
+extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu, ITaskContextFactory *factory);
 void run_simulator()
 {
     // --- 1. 硬件模拟环境初始化 ---
@@ -18,7 +20,7 @@ void run_simulator()
     BootInfo info;
     load_os_image(IMG_PATH, layout, &info);
 
-    kmain(layout, info, cpu);
+    kmain(layout, info, cpu, new WinTaskContextFactory());
 
     // --- 3. 内核基础设施初始化 ---
     std::cout << "[Simulator] System is running..." << std::endl;

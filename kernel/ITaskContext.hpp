@@ -11,11 +11,38 @@ class ITaskContext
 public:
     virtual ~ITaskContext() = default;
 
-    // 内核只调用这些具有语义的方法
-    virtual void prepare(void (*entry)(), void *stack_top, void (*exit_router)()) = 0;
+    virtual size_t get_context_size() const = 0;
 
-    virtual void set_parameter(int index, uintptr_t value) = 0;
+    /**
+     * 核心动作：从当前执行流切换到另一个执行流
+     * @param target 目标上下文
+     * 内部实现：保存当前寄存器到 this，从 target 恢复寄存器并跳转
+     */
+    virtual void transit_to(ITaskContext *target) = 0;
 
-    // 某些情况下内核可能需要知道栈指针，但不需要知道内部布局
+    /**
+     * 初始启动：不需要保存，直接加载 target 的状态
+     */
+    virtual void jump_to() = 0;
+
+    /**
+     * 配置执行流的基础要素
+     * @param entry 任务入口点
+     * @param stack_top 栈顶指针（通常是分配好的内存最高处）
+     * @param exit_stub 任务结束后的回归地址（内核路由）
+     */
+    virtual void setup_flow(void (*entry)(), void *stack_top, void (*exit_router)()) = 0;
+
+    /**
+     * 载入初始化参数
+     * @param index 参数位置（0 通常对应第一个参数）
+     * @param value 参数的值（指针或整数）
+     */
+    virtual void load_argument(size_t index, uintptr_t value) = 0;
+
+    /**
+     * 获取当前的栈指针
+     * 调度器在保存上下文时可能需要此值来更新 TCB 中的记录
+     */
     virtual void *get_stack_pointer() const = 0;
 };

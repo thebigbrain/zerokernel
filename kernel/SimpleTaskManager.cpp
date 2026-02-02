@@ -4,8 +4,8 @@
 
 void set_active_task_manager(ITaskManager *mgr);
 
-SimpleTaskManager::SimpleTaskManager(ObjectFactory *f, ICPUEngine *cpu, BootInfo *info)
-    : _factory(f), _cpu(cpu), _boot_info(info), _current(nullptr), _task_count(0)
+SimpleTaskManager::SimpleTaskManager(ObjectFactory *f, ITaskContextFactory *tcf, ITaskControlBlockFactory *tf)
+    : _obj_factory(f), _context_factory(tcf), _tcb_factory(tf), _current_task(nullptr), _task_count(0)
 {
     // 初始化任务追踪数组
     for (int i = 0; i < 64; ++i)
@@ -24,59 +24,43 @@ SimpleTaskManager::~SimpleTaskManager()
 // 生命周期管理
 // -------------------------------------------------------------------------
 
-ITaskControlBlock *SimpleTaskManager::spawn_task(void *entry_point)
+// 核心：所有创建路径最终都汇聚到这里
+ITaskControlBlock *SimpleTaskManager::create_and_register(TaskEntry entry, void *arg, TaskPriority prio)
 {
-    if (_task_count >= 64)
+    if (_task_count >= MAX_TASKS)
         return nullptr;
 
-    uint32_t id = _task_count++;
-    ITaskControlBlock *t = create_tcb_internal((void (*)())entry_point, id);
+    TaskExecutionInfo exec;
+    exec.entry = entry;
+    exec.config = arg;
+    TaskResourceConfig res;
+    res.priority = prio;
+    res.stack_size = 16384;
 
-    if (t)
-    {
-        _tasks[id] = t;
-        _ready_queue.push(t);
-        t->set_state(TaskState::READY);
-    }
+    auto *ctx = _context_factory->create_context();
+    auto *tcb = _tcb_factory->create_tcb(_task_count, ctx, exec, res);
 
-    return t;
+    if (tcb)
+        this->register_task(tcb);
+    return tcb;
 }
 
-void SimpleTaskManager::spawn_fixed_task(void *entry, void *config, void *proxy)
+// 现在 spawn_task 只需要一行逻辑
+ITaskControlBlock *SimpleTaskManager::spawn_task(void *entry, TaskPriority prio, void *config)
 {
-    // 复用 internal 创建逻辑
-    ITaskControlBlock *t = create_tcb_internal((void (*)())entry, _task_count++);
-
-    if (t)
-    {
-        _tasks[t->get_id()] = t;
-
-        // 注入 ABI 参数：第一个参数通常是代理，第二个是配置
-        t->get_context()->set_parameter(0, (uintptr_t)proxy);
-        t->get_context()->set_parameter(1, (uintptr_t)config);
-
-        t->set_state(TaskState::READY);
-        _ready_queue.push(t);
-    }
+    return create_and_register(reinterpret_cast<TaskEntry>(entry), config, prio);
 }
 
+// 消息版本也变得非常清晰
 void SimpleTaskManager::spawn_task_from_message(const Message &msg)
 {
-    void (*entry)() = (void (*)())msg.payload[0];
-    uint32_t task_id = (uint32_t)msg.payload[1];
-
-    if (task_id >= 64)
-        return;
-
-    ITaskControlBlock *t = this->create_tcb_internal(entry, task_id);
-
-    if (t)
-    {
-        _tasks[task_id] = t;
-        t->set_state(TaskState::READY);
-        _ready_queue.push(t);
-        printf("[TaskManager] Task %d loaded via Message.\n", task_id);
-    }
+    auto *tcb = create_and_register(
+        reinterpret_cast<TaskEntry>(msg.payload[0]), // entry
+        reinterpret_cast<void *>(msg.payload[1]),    // arg/config
+        static_cast<TaskPriority>(msg.payload[2])    // prio
+    );
+    if (tcb)
+        printf("[TaskManager] Task %d loaded via Message.\n", tcb->get_id());
 }
 
 // -------------------------------------------------------------------------
@@ -105,74 +89,74 @@ void SimpleTaskManager::make_task_ready(ITaskControlBlock *task)
 
 void SimpleTaskManager::yield_current_task()
 {
-    if (_ready_queue.empty())
+    // 1. 决策逻辑：选出下一个任务
+    ITaskControlBlock *next = pick_next_ready_task();
+    if (!next)
         return;
 
-    // 选出下一个
-    ITaskControlBlock *next = pick_next_ready_task();
-    ITaskControlBlock *prev = _current;
+    ITaskControlBlock *prev = _current_task;
+    _current_task = next;
 
-    _current = next;
-
+    // 2. 状态流转与执行切换
     if (prev == nullptr)
     {
-        // 第一次启动
-        _cpu->switch_to(next->get_context());
+        // 场景 A：系统首次启动，没有“前任”需要保存
+        next->get_context()->jump_to();
     }
     else if (prev != next)
     {
-        // 发生切换：将旧任务放回队列
-        make_task_ready(prev);
-        _cpu->transit(prev->get_context(), next->get_context());
+        // 场景 B：真正的任务切换
+        make_task_ready(prev); // 将旧任务放回就绪列表
+
+        // 语义化切换：由当前上下文发起向目标上下文的过渡
+        prev->get_context()->transit_to(next->get_context());
     }
     else
     {
-        // 只有自己在跑
+        // 场景 C：只有自己在跑，不需要切换硬件状态，但需要维持就绪态
         make_task_ready(next);
     }
 }
 
 void SimpleTaskManager::terminate_current_task()
 {
-    if (!_current)
+    if (!_current_task)
         return;
 
-    printf("[TaskManager] Task %d terminated.\n", _current->get_id());
+    auto tid = _current_task->get_id();
 
-    _current->set_state(TaskState::DEAD);
+    printf("[TaskManager] Task %d terminated.\n", tid);
+
+    _current_task->set_state(TaskState::DEAD);
 
     // 清理追踪记录，防止 get_task 拿到已死的任务
-    _tasks[_current->get_id()] = nullptr;
+    _tasks[tid] = nullptr;
 
-    _current = nullptr;
+    _current_task = nullptr;
     this->yield_current_task();
 }
 
-// -------------------------------------------------------------------------
-// 基础设施
-// -------------------------------------------------------------------------
-
-BootInfo *SimpleTaskManager::get_boot_info()
+void SimpleTaskManager::register_task(ITaskControlBlock *tcb)
 {
-    // 这里应当由 Kernel 在 bootstrap 阶段通过某种方式传入
-    // 暂时假设有某种手段获取全局 BootInfo 或在构造时传入
-    return _boot_info;
+    if (!tcb)
+        return;
+
+    uint32_t id = tcb->get_id();
+
+    // 再次确认 ID 是否合法（防止外部非法调用）
+    if (id < MAX_TASKS)
+    {
+        _tasks[id] = tcb;
+        _task_count++; // 只有在这里才真正增加任务总数
+
+        // 通常新创建的任务默认为就绪态
+        make_task_ready(tcb);
+    }
 }
 
-ITaskControlBlock *SimpleTaskManager::create_tcb_internal(void (*entry)(), uint32_t id)
+ITaskControlBlock *SimpleTaskManager::get_task(uint32_t task_id)
 {
-    // 1. 利用 CPU 引擎创建架构相关的上下文
-    void *ctx_mem = _factory->allocate_raw(_cpu->get_context_size());
-    ITaskContext *ctx = _cpu->create_context_at(ctx_mem);
-
-    // 2. 利用工厂创建具体的 TCB 实例
-    ITaskControlBlock *t = _factory->create<TaskControlBlock>(id, ctx);
-
-    // 3. 分配栈空间（16KB）
-    void *stack = _factory->allocate_raw(16384);
-
-    // 4. 初始化上下文：设定入口、栈顶、以及任务退出时的跳转路由
-    ctx->prepare(entry, (uint8_t *)stack + 16384, task_exit_router);
-
-    return t;
+    if (task_id >= MAX_TASKS)
+        return nullptr;
+    return _tasks[task_id];
 }

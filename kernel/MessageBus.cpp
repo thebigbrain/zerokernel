@@ -1,6 +1,6 @@
 #include "MessageBus.hpp"
 
-MessageBus::MessageBus(ObjectFactory *f) : _factory(f)
+MessageBus::MessageBus(ObjectFactory *f) : _obj_factory(f)
 {
     // 初始化消息节点池和待处理队列
     _msg_node_pool = f->create<KObjectPool<ListNode<Message>>>(f);
@@ -8,12 +8,13 @@ MessageBus::MessageBus(ObjectFactory *f) : _factory(f)
     _registry = f->create<KList<SubscriberEntry *>>(f);
 }
 
-void MessageBus::subscribe(MessageType type, ITaskControlBlock *task)
+void MessageBus::subscribe(MessageType type, uint32_t task_id)
 {
     SubscriberEntry *entry = find_or_create_entry(type);
-    entry->tasks->push_back(task);
+    entry->task_ids->push_back(task_id);
 }
 
+// 订阅：内核回调（用于内核模块内部通信）
 void MessageBus::subscribe(MessageType type, KernelCallback callback)
 {
     SubscriberEntry *entry = find_or_create_entry(type);
@@ -27,37 +28,46 @@ void MessageBus::publish(const Message &msg)
 
 void MessageBus::dispatch_messages()
 {
-    if (_pending_queue->empty())
+    Message msg;
+    // 1. 从就绪队列不断取出待处理的消息
+    while (_pending_queue->pop_front(msg))
+    {
+        SubscriberEntry *entry = find_entry(msg.type);
+        if (!entry)
+            continue;
+
+        // 2. 分发给所有订阅的 Task ID
+        for (auto it = entry->task_ids->begin(); it != entry->task_ids->end(); ++it)
+        {
+            // 通过具体的投递逻辑将消息送往任务邮箱
+            deliver_to_task(*it, msg);
+        }
+
+        // 3. 执行所有订阅的内核回调
+        for (auto it = entry->funcs->begin(); it != entry->funcs->end(); ++it)
+        {
+            (*it).invoke(msg);
+        }
+    }
+}
+void MessageBus::deliver_to_task(uint32_t target_id, const Message &msg)
+{
+    // 1. 找到对应的消息条目
+    SubscriberEntry *entry = find_entry(msg.type);
+    if (!entry)
         return;
 
-    auto it = _pending_queue->begin();
-    auto end_it = _pending_queue->end();
+    // 2. 验证该任务是否在订阅列表中
+    // 再次利用 KList 的查找能力
+    uint32_t *found_id = entry->task_ids->find([target_id](uint32_t id)
+                                               { return id == target_id; });
 
-    while (it != end_it)
+    if (found_id)
     {
-        const Message &msg = *it;
-        SubscriberEntry *entry = find_entry(msg.type);
-
-        if (entry)
-        {
-            // 1. 分发给订阅的任务控制块
-            for (auto t_it = entry->tasks->begin(); t_it != entry->tasks->end(); ++t_it)
-            {
-                // 使用我们重构后的领域方法，这会自动处理 BLOCKED 状态唤醒
-                (*t_it)->deliver(msg);
-            }
-
-            // 2. 执行内核级回调
-            for (auto f_it = entry->funcs->begin(); f_it != entry->funcs->end(); ++f_it)
-            {
-                (*f_it).invoke(msg);
-            }
-        }
-        ++it;
+        // 执行分发逻辑（例如放入任务的私有队列或触发中断模拟）
+        // 这里体现了为什么要解耦：Bus 只管找到 ID，
+        // 具体的“推送到任务”动作可以交给 Runtime 或 TaskManager
     }
-
-    // 处理完毕，清空队列并交还节点给池
-    _pending_queue->clear();
 }
 
 uint32_t MessageBus::get_pending_count()
@@ -67,28 +77,23 @@ uint32_t MessageBus::get_pending_count()
 
 SubscriberEntry *MessageBus::find_entry(MessageType type)
 {
-    for (auto node = _registry->begin(); node != _registry->end(); ++node)
-    {
-        if ((*node)->type == type)
-            return *node;
-    }
-    return nullptr;
+    // 利用我们之前补充的 lambda 查找逻辑
+    return _registry->find_match([type](SubscriberEntry *e)
+                                 { return e->type == type; });
 }
 
 SubscriberEntry *MessageBus::find_or_create_entry(MessageType type)
 {
-    SubscriberEntry *e = find_entry(type);
-    if (e)
-        return e;
+    SubscriberEntry *entry = find_entry(type);
+    if (entry)
+        return entry;
 
-    // 创建新条目
-    e = (SubscriberEntry *)_factory->allocate_raw(sizeof(SubscriberEntry));
-    e->type = type;
+    // 创建新条目：注意嵌套链表的初始化
+    entry = (SubscriberEntry *)_obj_factory->allocate_raw(sizeof(SubscriberEntry));
+    entry->type = type;
+    entry->task_ids = _obj_factory->create<KList<uint32_t>>(_obj_factory);
+    entry->funcs = _obj_factory->create<KList<KernelCallback>>(_obj_factory);
 
-    // 使用工厂创建内部列表，确保内存来源一致
-    e->tasks = _factory->create<KList<ITaskControlBlock *>>(_factory);
-    e->funcs = _factory->create<KList<KernelCallback>>(_factory);
-
-    _registry->push_back(e);
-    return e;
+    _registry->push_back(entry);
+    return entry;
 }

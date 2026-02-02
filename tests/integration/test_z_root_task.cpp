@@ -81,13 +81,13 @@ void test_root_task_lifecycle()
 
     // 3. 准备任务 (注入入口和路由器)
     // 此时执行 prepare，内部会进行 8 字节相位补偿
-    ctx->prepare(reinterpret_cast<void (*)()>(root_task_entry), stack_top, root_task_exit_router);
+    ctx->setup_flow(reinterpret_cast<void (*)()>(root_task_entry), stack_top, root_task_exit_router);
 
     // 4. 参数注入
-    ctx->set_parameter(0, reinterpret_cast<uintptr_t>(&kernel_factory));
-    ctx->set_parameter(1, 0x2222);
-    ctx->set_parameter(2, 0x3333);
-    ctx->set_parameter(3, 0x4444);
+    ctx->load_argument(0, reinterpret_cast<uintptr_t>(&kernel_factory));
+    ctx->load_argument(1, 0x2222);
+    ctx->load_argument(2, 0x3333);
+    ctx->load_argument(3, 0x4444);
 
     // 5. 打印关键调试信息 (用于断言失败时的手动核对)
     std::cout << "  [DEBUG] Context Addr: " << ctx << std::endl;
@@ -136,10 +136,10 @@ void test_root_task_baremetal_layout()
     auto mock_router = reinterpret_cast<void (*)()>(0xAAAABBBBCCCCDDD0ULL);
 
     WinTaskContext ctx;
-    ctx.set_parameter(0, 0x5555666677778888ULL); // 设置参数 (RCX)
-    ctx.prepare(mock_entry, stack_top, mock_router);
+    ctx.load_argument(0, 0x5555666677778888ULL); // 设置参数 (RCX)
+    ctx.setup_flow(mock_entry, stack_top, mock_router);
 
-    // 2. 获取 prepare 后的栈指针 (模拟汇编中的 RDX)
+    // 2. 获取 setup_flow 后的栈指针 (模拟汇编中的 RDX)
     uintptr_t sp_val = reinterpret_cast<uintptr_t>(ctx.get_stack_pointer());
 
     // --- 模拟 CPU 行为验证 ---
@@ -161,7 +161,7 @@ void test_root_task_baremetal_layout()
 
     // E. 【核心断言 2】：影子空间验证
     // 根据 Windows ABI，[RSP + 32] 处应该是 Caller 压入的返回地址。
-    // 在我们的 prepare 逻辑中，这里存放的是 mock_router。
+    // 在我们的 setup_flow 逻辑中，这里存放的是 mock_router。
     uintptr_t router_ptr_addr = rsp_at_entry_start + 32;
 
     // 安全起见，打印一下地址
@@ -189,8 +189,8 @@ void test_baremetal_stack_spec()
     auto f_exit = reinterpret_cast<void (*)()>(0xBBBBBBBB00000002ULL);
 
     WinTaskContext ctx;
-    ctx.set_parameter(0, 0xCAFEBABECAFEBABEULL); // 参数注入 (RCX)
-    ctx.prepare(f_entry, stack_top, f_exit);
+    ctx.load_argument(0, 0xCAFEBABECAFEBABEULL); // 参数注入 (RCX)
+    ctx.setup_flow(f_entry, stack_top, f_exit);
 
     uintptr_t sp_val = reinterpret_cast<uintptr_t>(ctx.get_stack_pointer());
 

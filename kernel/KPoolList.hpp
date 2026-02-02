@@ -37,6 +37,42 @@ public:
         _size++;
     }
 
+    /**
+     * pop_front: 获取并移除头部元素
+     * @param out_data 输出参数，用于存放弹出的数据
+     * @return bool 如果列表为空返回 false，成功弹出返回 true
+     */
+    bool pop_front(T &out_data)
+    {
+        if (!_head)
+        {
+            return false;
+        }
+
+        // 1. 暂存当前头部节点
+        ListNode<T> *node_to_remove = _head;
+
+        // 2. 拷贝数据到输出变量
+        out_data = node_to_remove->data;
+
+        // 3. 移动头指针
+        _head = _head->next;
+
+        // 4. 如果头变空了，尾也要置空
+        if (!_head)
+        {
+            _tail = nullptr;
+        }
+
+        // 5. 【核心】将节点归还给对象池，防止内存泄漏
+        _pool->deallocate(node_to_remove);
+
+        // 6. 更新计数
+        _size--;
+
+        return true;
+    }
+
     // 清空列表并将所有节点还给对象池
     void clear()
     {

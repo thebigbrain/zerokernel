@@ -14,7 +14,7 @@
 struct SubscriberEntry
 {
     MessageType type;
-    KList<ITaskControlBlock *> *tasks;
+    KList<uint32_t> *task_ids;
     KList<KernelCallback> *funcs;
 };
 
@@ -25,7 +25,7 @@ struct SubscriberEntry
 class MessageBus
 {
 private:
-    ObjectFactory *_factory;
+    ObjectFactory *_obj_factory;
     KList<SubscriberEntry *> *_registry;
     KObjectPool<ListNode<Message>> *_msg_node_pool;
     KPoolList<Message> *_pending_queue;
@@ -34,7 +34,7 @@ public:
     MessageBus(ObjectFactory *f);
 
     // 订阅接口
-    void subscribe(MessageType type, ITaskControlBlock *task);
+    void subscribe(MessageType type, uint32_t task_id);
     void subscribe(MessageType type, KernelCallback callback);
 
     // 发布接口
@@ -42,6 +42,8 @@ public:
 
     // 分发逻辑：由 Kernel::run_loop 调用
     void dispatch_messages();
+
+    void deliver_to_task(uint32_t target_id, const Message &msg);
 
     uint32_t get_pending_count();
 

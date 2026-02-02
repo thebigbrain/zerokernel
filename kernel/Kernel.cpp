@@ -13,21 +13,34 @@
         [](const Message &m, void *ctx) { static_cast<Class *>(ctx)->Func(m); }, \
         static_cast<void *>(ObjPtr))
 
-void Kernel::bootstrap(BootInfo *info)
+void Kernel::bootstrap()
 {
-    _boot_info = info;
+    setup_infrastructure();
+    spawn_initial_tasks();
+    start_engine();
+}
 
-    // 1. 基础设施初始化 (通过组合持有的对象)
-    this->_bus = _factory->create<MessageBus>(_factory);
-
-    // 2. 领域逻辑订阅
+void Kernel::setup_infrastructure()
+{
     _bus->subscribe(MessageType::SYS_LOAD_TASK, BIND_KERNEL_CB(Kernel, handle_load_task, this));
     _bus->subscribe(MessageType::EVENT_PRINT, BIND_KERNEL_CB(Kernel, handle_event_print, this));
+}
 
-    // 3. 移交控制权给引擎
-    // 注意：我们将 KernelProxy 的创建和注入也视为一种启动策略，交给引擎或管理器
-    KernelProxy proxy(_bus, this->get_task_manager());
-    _engine->start(_boot_info->root_task_entry, _boot_info->config_ptr, &proxy);
+void Kernel::spawn_initial_tasks()
+{
+    // 1. 创建 RootTask。
+    // 这里 rt 就是 Kernel 传进来的 KernelProxy 指针，
+    // 它将被 TaskManager 填入任务的第一个参数寄存器（如 x64 的 RCX）
+    _task_manager->spawn_task(_boot_info->root_task_entry, TaskPriority::ROOT, _boot_info->config_ptr);
+
+    // 2. 创建 IdleTask。
+    // Idle 任务通常不需要代理（传入 nullptr），因为它不执行业务 IPC
+    _task_manager->spawn_task(_boot_info->idle_task_entry, TaskPriority::IDLE, nullptr);
+}
+
+void Kernel::start_engine()
+{
+    _engine->start();
 }
 
 void Kernel::handle_load_task(const Message &msg)

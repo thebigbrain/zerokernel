@@ -5,48 +5,55 @@
 
 void test_shadow_space_and_alignment_contract()
 {
-    WinCPUEngine cpu;
-    void *ctx_mem = malloc(cpu.get_context_size());
-    ITaskContext *ctx = cpu.create_context_at(ctx_mem);
+    // 1. 实例化具体的上下文（不再依赖 CPUEngine）
+    WinTaskContext ctx;
 
-    // 准备任务栈
+    // 2. 准备任务栈
     const size_t STACK_SIZE = 4096;
-    uint8_t *stack_mem = (uint8_t *)malloc(STACK_SIZE);
-    void *stack_top = stack_mem + STACK_SIZE; // 栈顶
+    // 强制 16 字节对齐分配，排除因 malloc 自身对齐导致测试“撞大运”通过的情况
+    void *stack_mem = _aligned_malloc(STACK_SIZE, 16);
+    void *stack_top = static_cast<uint8_t *>(stack_mem) + STACK_SIZE;
 
-    // 模拟入口
-    auto mock_entry = []() {};
-    ctx->prepare((void (*)())mock_entry, stack_top, nullptr);
+    // 3. 执行设置流
+    // 假设我们要进入 mock_entry，退出时进入 nullptr（或 exit_stub）
+    auto mock_entry = []() { /* 模拟执行 */ };
+    ctx.setup_flow((void (*)())mock_entry, stack_top, nullptr);
 
     // --- 核心校验逻辑 ---
 
-    // 1. 获取 prepare 后的栈指针 (RSP)
-    uintptr_t rsp = (uintptr_t)ctx->get_stack_pointer();
+    // 1. 获取 setup_flow 后的栈指针 (RSP)
+    // 此时 RSP 指向 WinX64Regs 结构体底部
+    uintptr_t rsp_in_context = (uintptr_t)ctx.get_stack_pointer();
 
-    // 2. 模拟 context_load_asm 执行完 'ret' 后的状态
-    // 当 ret 执行时，它会从栈顶弹出一个值到 RIP。
-    // 所以在任务的入口点第一条指令时，实际的 RSP 应该是：
-    uintptr_t rsp_at_entry = rsp + 8;
+    // 2. 模拟汇编执行过程
+    // context_load_asm 会 pop 出所有寄存器，最后执行一条 'ret'
+    // ret 弹出 8 字节的 RIP，此时 RSP 会增加：sizeof(WinX64Regs)
+    uintptr_t rsp_at_entry = rsp_in_context + sizeof(WinX64Regs);
 
-    // 校验 A: 16 字节对齐
-    // Windows ABI 规定：在 call 指令执行前，RSP 必须 16 字节对齐。
-    // 意味着进入函数（call 压入 8 字节后）时，RSP 应该是 16n + 8。
+    // --- 校验 A: 16 字节对齐相位 (Phase) ---
+    //
+    // 规则：在进入函数第一条指令时，RSP 必须满足 (RSP + 8) % 16 == 0
+    // 也就是说：RSP % 16 必须等于 8。
     if (rsp_at_entry % 16 != 8)
     {
-        throw std::runtime_error("ABI Violation: RSP at entry must be 16n + 8 for alignment");
+        _aligned_free(stack_mem);
+        throw std::runtime_error("ABI Violation: RSP at entry must be 16n + 8");
     }
 
-    // 校验 B: 影子空间（Home Space）
-    // Windows 规定调用者必须在栈上预留 32 字节给被调用者保存 RCX, RDX, R8, R9。
-    // 即从 (rsp_at_entry) 到 (stack_top) 必须至少有 32 字节。
+    // --- 校验 B: 影子空间 (Shadow Space / Home Space) ---
+    // Windows 规定调用者必须预留 32 字节。
+    // 这 32 字节位于“返回地址”之上（高地址方向）。
     uintptr_t available_space = (uintptr_t)stack_top - rsp_at_entry;
+
+    // 注意：这里要减去返回地址占用的 8 字节，剩下的才是给函数用的影子空间
     if (available_space < 32)
     {
-        throw std::runtime_error("ABI Violation: No shadow space (32 bytes) reserved on stack");
+        _aligned_free(stack_mem);
+        throw std::runtime_error("ABI Violation: No shadow space (32 bytes) reserved");
     }
 
-    free(stack_mem);
-    free(ctx_mem);
+    _aligned_free(stack_mem);
+    std::cout << "  [PASS] Shadow Space and Alignment Contract Verified." << std::endl;
 }
 
 K_TEST_CASE("ABI: Shadow Space & Alignment", test_shadow_space_and_alignment_contract);
