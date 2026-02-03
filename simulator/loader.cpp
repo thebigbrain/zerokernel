@@ -56,7 +56,7 @@ void load_os_image(const char *path, PhysicalMemoryLayout layout, BootInfo *info
                 // 这里可以选择退出或报错
             }
 
-            info->root_task_entry = (void (*)(void *))entry_addr;
+            info->root_task_entry = (void (*)(void *, void *))entry_addr;
 
             uint8_t *code = (uint8_t *)info->root_task_entry;
             printf("[Loader] Instruction at Entry: %02X %02X %02X %02X\n",

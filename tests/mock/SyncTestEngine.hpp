@@ -1,34 +1,28 @@
-#include "kernel/IExecutionEngine.hpp"
-#include "kernel/ITaskManager.hpp"
-#include "common/IUserRuntime.hpp"
+#pragma once
 
-class SyncTestEngine : public IExecutionEngine
+#include "kernel/ICPUEngine.hpp"
+#include "kernel/SimpleTaskLifecycle.hpp"
+
+class SyncTestEngine : public ICPUEngine
 {
 private:
-    ITaskManager *_tm;
-    IUserRuntime *_rt;
+    SimpleTaskLifecycle *_lifecycle;
 
 public:
-    // 注入必要的依赖，以便引擎能找到任务和运行环境
-    SyncTestEngine(ITaskManager *tm, IUserRuntime *rt)
-        : _tm(tm), _rt(rt) {}
+    SyncTestEngine(SimpleTaskLifecycle *lifecycle) : _lifecycle(lifecycle) {}
 
-    void start() override
+    void halt() override {}
+    void interrupt_enable(bool) override {}
+
+    void start()
     {
-        ITaskControlBlock *current = _tm->get_current_task();
-        if (!current)
-            return;
-
-        // 领域模型上的直接依赖：直接获取执行信息
-        const TaskExecutionInfo &info = current->get_execution_info();
-        auto entry = (void (*)(void *, void *))info.entry;
-
-        entry(_rt, info.config);
-    }
-
-    // 同步引擎在测试中通常不需要复杂的抢占调度
-    void schedule_task(ITaskControlBlock *task) override
-    {
-        // 如果是异步消息触发了新任务，可以在这里立刻同步调用它
+        auto *current = _lifecycle->get_current_task();
+        if (current)
+        {
+            // 重点：直接利用接口的多态性
+            // 如果是 MockTaskContext，它会直接运行函数
+            // 如果是 WinTaskContext，它会执行真实的跳转（但在同步测试中我们用 Mock）
+            current->get_context()->jump_to();
+        }
     }
 };

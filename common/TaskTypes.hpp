@@ -19,25 +19,41 @@ enum class TaskState : uint32_t
     RUNNING,  // 正在当前 CPU 核心上执行
     BLOCKED,  // 等待某个事件（如 IPC 消息、信号量、IO）
     SLEEPING, // 被主动挂起或定时睡眠
-    DEAD      // 已执行完毕，等待 ITaskManager 回收资源
+    DEAD      // 已执行完毕，等待 ITaskLifecycle 回收资源
 };
 
 typedef void (*TaskEntry)(void *, void *);
 
+class IUserRuntime;
+
 struct TaskExecutionInfo
 {
     TaskEntry entry; // 明确的函数指针类型
-    void *config;    // 任务私有配置
+    IUserRuntime *runtime;
+    void *config; // 任务私有配置
 };
 
 /**
  * TaskResourceConfig: 定义任务的资源约束
  */
+
+class KStackBuffer;
 struct TaskResourceConfig
 {
-    size_t stack_size;     // 栈大小
-    TaskPriority priority; // 优先级
-    // 以后可以扩展：
-    // size_t heap_quota;   // 堆配额
-    // uint32_t affinity;   // CPU 亲和性
+    KStackBuffer *stack; // 不再是裸指针，而是受管对象
+    TaskPriority priority;
+
+    TaskResourceConfig()
+        : stack(nullptr),
+          priority(TaskPriority::NORMAL) {}
+};
+
+/**
+ * TaskSpawnParams: 综合创建参数
+ * 它是业务层发往内核的“完整蓝图”
+ */
+struct TaskSpawnParams
+{
+    TaskExecutionInfo exec_info;   // 逻辑：代码在哪里，用什么运行时
+    TaskResourceConfig res_config; // 资源：给多少内存，优先级多高
 };

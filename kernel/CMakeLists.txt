@@ -4,6 +4,7 @@ file(GLOB KERNEL_SOURCES CONFIGURE_DEPENDS "*.cpp")
 # 2. 搜寻当前目录下所有的头文件 (.hpp)，确保它们包含在 IDE 的工程树中
 file(GLOB KERNEL_HEADERS CONFIGURE_DEPENDS "*.hpp")
 
+
 # 3. 定义静态库
 add_library(kernel STATIC 
     ${KERNEL_SOURCES}

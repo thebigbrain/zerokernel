@@ -4,21 +4,26 @@
 // 依然需要这个底层函数指针定义
 typedef void (*KernelMessageCallbackFunc)(const Message &, void *);
 
-struct KernelCallback
+struct MessageCallback
 {
     KernelMessageCallbackFunc func;
     void *context;
 
     // 默认构造
-    KernelCallback() : func(nullptr), context(nullptr) {}
+    MessageCallback() : func(nullptr), context(nullptr) {}
 
     // 方便构造
-    KernelCallback(KernelMessageCallbackFunc f, void *ctx) : func(f), context(ctx) {}
+    MessageCallback(KernelMessageCallbackFunc f, void *ctx) : func(f), context(ctx) {}
+
+    bool operator==(const MessageCallback &other) const
+    {
+        return func == other.func && context == other.context;
+    }
 
     // 静态辅助方法：不分配内存，只返回一个值对象
-    static KernelCallback Create(KernelMessageCallbackFunc f, void *ctx = nullptr)
+    static MessageCallback Create(KernelMessageCallbackFunc f, void *ctx = nullptr)
     {
-        return KernelCallback(f, ctx);
+        return MessageCallback(f, ctx);
     }
 
     // 执行方法
@@ -26,6 +31,7 @@ struct KernelCallback
     {
         if (func)
         {
+            // 在这里可以增加 Trace 调试，记录哪个 callback 被触发了
             func(msg, context);
         }
     }

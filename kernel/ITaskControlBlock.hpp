@@ -25,4 +25,7 @@ public:
     virtual const TaskResourceConfig &get_resource_config() const = 0;
 
     virtual ITaskContext *get_context() const = 0;
+
+    virtual bool is_queued() const = 0;
+    virtual void set_queued(bool queued) = 0;
 };

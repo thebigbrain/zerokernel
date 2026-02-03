@@ -1,55 +1,64 @@
 #pragma once
 
+#include <new>
+
 #include "common/BootInfo.hpp"
-#include "ITaskManager.hpp"
+#include "TaskService.hpp"
 #include "IExecutionEngine.hpp"
-#include "MessageBus.hpp"
-#include "ObjectFactory.hpp"
+#include "IMessageBus.hpp"
 #include "ICPUEngine.hpp"
+#include "IObjectBuilder.hpp" // 引入 Builder 接口
+#include "ITaskControlBlockFactory.hpp"
+#include "ITaskContextFactory.hpp"
+#include "KStackBuffer.hpp"
 
 class Kernel
 {
 private:
     // 基础依赖
-    ObjectFactory *_obj_factory;
     ICPUEngine *_cpu;
+    IAllocator *_static_allocator; // 初始静态分配器
+    IAllocator *_runtime_heap;     // 稍后建立的动态堆
+    IObjectBuilder *_builder;      // 稍后建立的业务构建器
 
-    // 领域组件 (组合优于继承)
-    ITaskManager *_task_manager;
+    ITaskContextFactory *_task_context_factory;
+    ITaskControlBlockFactory *_tcb_factory;
+
+    // 领域组件
+    TaskService *_task_service;
     IExecutionEngine *_engine;
-    MessageBus *_bus;
+    IMessageBus *_bus;
+    ITaskLifecycle *_lifecycle;
+    ISchedulingStrategy *_strategy;
 
-    BootInfo *_boot_info;
-
-    IUserRuntime *_user_runtime;
+    BootInfo *_boot_info = nullptr;
+    IUserRuntime *_user_runtime = nullptr;
 
 public:
-    Kernel(ICPUEngine *cpu, ObjectFactory *factory)
-        : _cpu(cpu), _obj_factory(factory)
-    {
-    }
+    // 构造函数：注入 Builder 和 CPU 引擎
+    Kernel(ICPUEngine *cpu, IAllocator *loader)
+        : _cpu(cpu),
+          _static_allocator(loader) {}
 
     void set_boot_info(BootInfo *info) { _boot_info = info; }
+    void set_context_factory(ITaskContextFactory *factory) { _task_context_factory = factory; }
 
-    // 设置执行策略（同步测试引擎 or 异步调度引擎）
-    void set_execution_engine(IExecutionEngine *engine) { _engine = engine; }
+    // 核心初始化逻辑
+    void setup_infrastructure();
+    void spawn_initial_tasks();
+    void start_engine();
 
-    // 设置任务管理器实现
-    void set_task_manager(ITaskManager *tm) { _task_manager = tm; }
-
-    void set_message_bus(MessageBus *bus) { _bus = bus; }
-
-    void set_user_runtime(IUserRuntime *runtime) { _user_runtime = runtime; }
-
-    void setup_infrastructure(); // 仅仅建立总线连接
-    void spawn_initial_tasks();  // 仅仅创建 TCB，但不运行
-    void start_engine();         // 移交控制权
-
-    // 原有的 bootstrap 只是这些动作的顺序组合
     void bootstrap();
 
+    IMessageBus *get_message_bus() const { return _bus; }
+    ITaskLifecycle *get_task_lifecycle() const { return _lifecycle; }
+
 private:
-    // 领域逻辑：处理系统事件
-    void handle_load_task(const Message &msg);
     void handle_event_print(const Message &msg);
+
+    KStackBuffer *create_stack(size_t size)
+    {
+        // 将“去哪里拿内存”和“怎么构建对象”的细节锁死在这里
+        return _builder->construct<KStackBuffer>(_runtime_heap, size);
+    }
 };

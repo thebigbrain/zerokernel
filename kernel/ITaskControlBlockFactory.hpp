@@ -11,8 +11,6 @@ class ITaskControlBlockFactory
 {
 public:
     virtual ITaskControlBlock *create_tcb(
-        uint32_t id,
-        ITaskContext *ctx,
         const TaskExecutionInfo &exec_info,
         const TaskResourceConfig &res_config) = 0;
 

@@ -3,6 +3,7 @@
 add_library(simulator_common 
     WinCPUEngine.hpp
     context_switch.asm
+    cpu_halt.asm
     IdleTask.hpp
     loader.cpp
     Simulator.hpp

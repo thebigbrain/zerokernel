@@ -7,9 +7,6 @@
 #include "IdleTask.hpp"
 #include "WinTaskContextFactory.hpp"
 
-#include <kernel/AsyncSchedulingEngine.hpp>
-#include <kernel/SimpleTaskManager.hpp>
-
 extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu, ITaskContextFactory *factory);
 void run_simulator()
 {
