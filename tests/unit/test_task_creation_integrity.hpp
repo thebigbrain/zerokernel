@@ -8,7 +8,7 @@
 
 void unit_test_task_creation_integrity()
 {
-    Kernel *kernel = create_kernel(32 * 1024);
+    Kernel *kernel = create_mock_kernel(32 * 1024);
 
     kernel->setup_infrastructure();
 

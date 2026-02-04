@@ -35,7 +35,7 @@ inline BootInfo create_mock_boot_info(void *pool_base, size_t pool_size)
     return info;
 }
 
-Kernel *create_kernel(size_t mem_size = 64 * 1024)
+Kernel *create_mock_kernel(size_t mem_size = 64 * 1024)
 {
     // --- 1. 这里的数组就是 pool 的来源 ---
     // 我们在栈上开辟 16KB 空间作为“物理内存”
