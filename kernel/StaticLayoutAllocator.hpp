@@ -4,6 +4,8 @@
 #include "IAllocator.hpp"
 #include "KernelUtils.hpp"
 
+#include "Memory.hpp"
+
 /**
  * StaticLayoutAllocator: 管理一块预先确定的内存布局
  */
@@ -15,8 +17,24 @@ private:
     size_t _used;
 
 public:
+    static StaticLayoutAllocator *create(PhysicalMemoryLayout &layout)
+    {
+        return new (layout.base) StaticLayoutAllocator(
+            (uint8_t *)layout.base + sizeof(StaticLayoutAllocator),
+            layout.size - sizeof(StaticLayoutAllocator));
+    }
+
     StaticLayoutAllocator(void *base, size_t size)
         : _base(base), _size(size), _used(0) {}
+
+    /** @brief 获取该分配器管理的总容量（不含分配器对象本身） */
+    size_t get_capacity() const { return _size; }
+
+    /** @brief 获取当前已使用的字节数（包含对齐填充） */
+    size_t get_used_bytes() const { return _used; }
+
+    /** @brief 获取当前理论剩余空间 */
+    size_t get_free_size() const { return _size - _used; }
 
     void *allocate(size_t size, size_t alignment = 8) override
     {

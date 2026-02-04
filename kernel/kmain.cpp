@@ -26,13 +26,11 @@
 extern "C" void kmain(PhysicalMemoryLayout layout, BootInfo info, ICPUEngine *cpu, ITaskContextFactory *ctx_factory)
 {
     // 1. 在物理内存基址处建立引导分配器
-    StaticLayoutAllocator *loader = new (layout.base) StaticLayoutAllocator(
-        (uint8_t *)layout.base + sizeof(StaticLayoutAllocator),
-        layout.size - sizeof(StaticLayoutAllocator));
+    auto static_allocator = StaticLayoutAllocator::create(layout);
 
     // 2. 利用这个分配器创建第一个，也是永不销毁的对象：Kernel
     // 我们将 loader 传给它，由 Kernel 内部去完成后续的“堆建立”和“Builder建立”
-    Kernel *kernel = new (loader->allocate(sizeof(Kernel))) Kernel(cpu, loader);
+    Kernel *kernel = new (static_allocator->allocate(sizeof(Kernel))) Kernel(static_allocator, cpu);
 
     // 3. 注入必要信息并启动
     kernel->set_boot_info(&info);

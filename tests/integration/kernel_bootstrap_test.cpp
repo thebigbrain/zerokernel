@@ -7,8 +7,8 @@
 #include "unit/test_abi_frames.hpp"
 #include "unit/test_message_system.hpp"
 #include "unit/test_kernel_proxy.hpp"
-#include "unit/test_runtime.hpp"
 #include "unit/test_task_factory.hpp"
+#include "unit/test_task_creation_integrity.hpp"
 
 // --- 基础引导与协议层 ---
 K_TEST_CASE(unit_test_compact_pe_loading, "Compact PE Entry");
@@ -28,7 +28,8 @@ K_TEST_CASE(unit_test_message_system_integrity, "[Step 3] MessageBus: Pub-Sub Fl
 
 // --- 运行时与代理 (Service Layer) ---
 K_TEST_CASE(unit_test_kernel_proxy_behavior, "KernelProxy: API Forwarding");
-K_TEST_CASE(test_runtime_interface_integration, "Integration Test Suite for IUserRuntime");
+
+K_TEST_CASE(unit_test_task_creation_integrity, "Task Creation Integrity");
 
 // --- 最终全链路启动测试 ---
 // K_TEST_CASE(test_full_kernel_event_flow,               "Kernel: RootTask to Print Event Dispatch");
