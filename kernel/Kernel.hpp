@@ -11,6 +11,8 @@
 #include "ITaskControlBlockFactory.hpp"
 #include "ITaskContextFactory.hpp"
 #include "KStackBuffer.hpp"
+#include "ISchedulingControl.hpp"
+#include "IExecutionEngine.hpp"
 
 class Kernel
 {
@@ -30,6 +32,7 @@ private:
     IMessageBus *_bus;
     ITaskLifecycle *_lifecycle;
     ISchedulingStrategy *_strategy;
+    ISchedulingControl *_scheduling_control;
 
     BootInfo *_boot_info = nullptr;
     IUserRuntime *_user_runtime = nullptr;
@@ -38,7 +41,16 @@ public:
     // 构造函数：注入 Builder 和 CPU 引擎
     Kernel(ICPUEngine *cpu, IAllocator *loader)
         : _cpu(cpu),
-          _static_allocator(loader) {}
+          _static_allocator(loader),
+          _runtime_heap(nullptr), // 必须手动清零
+          _builder(nullptr),
+          _task_service(nullptr),
+          _engine(nullptr), // 关键！
+          _bus(nullptr),
+          _lifecycle(nullptr),
+          _strategy(nullptr)
+    {
+    }
 
     void set_boot_info(BootInfo *info) { _boot_info = info; }
     void set_context_factory(ITaskContextFactory *factory) { _task_context_factory = factory; }
@@ -52,13 +64,17 @@ public:
 
     IMessageBus *get_message_bus() const { return _bus; }
     ITaskLifecycle *get_task_lifecycle() const { return _lifecycle; }
-
-private:
-    void handle_event_print(const Message &msg);
+    TaskService *get_task_service() const { return _task_service; }
+    ICPUEngine *get_cpu() const { return _cpu; }
+    IAllocator *get_runtime_heap() const { return _runtime_heap; }
+    IObjectBuilder *get_object_builder() const { return _builder; }
 
     KStackBuffer *create_stack(size_t size)
     {
         // 将“去哪里拿内存”和“怎么构建对象”的细节锁死在这里
         return _builder->construct<KStackBuffer>(_runtime_heap, size);
     }
+
+protected:
+    void handle_event_print(const Message &msg);
 };

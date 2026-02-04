@@ -67,23 +67,7 @@ public:
 
     void publish(const Message &msg) override
     {
-
         _pending_queue.push_back(msg);
-    }
-
-    // --- 业务扩展逻辑 ---
-
-    void subscribe_task(MessageType type, uint32_t task_id)
-    {
-        // 将 task_id 存入 context
-        this->subscribe(type, MessageCallback(
-                                  [](const Message &m, void *ctx)
-                                  {
-                                      uint32_t tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(ctx));
-                                      // 这里通常调用内核全局分发接口，例如：
-                                      // Kernel::get_instance()->deliver_to_task(tid, m);
-                                  },
-                                  reinterpret_cast<void *>(static_cast<uintptr_t>(task_id))));
     }
 
     void dispatch_messages()
@@ -113,7 +97,6 @@ private:
         auto *entry = find_entry(type);
         if (!entry)
         {
-            // 修正：使用 _builder 替代已废弃的 _obj_factory
             entry = _builder->construct<SubscriberEntry>(_builder);
             if (entry)
             {

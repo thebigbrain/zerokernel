@@ -1,3 +1,5 @@
+#pragma once
+
 #include <iostream>
 #include <mock/SimulatorMock.hpp>
 #include <test_framework.hpp>
@@ -41,5 +43,3 @@ void test_runtime_interface_integration()
     delete mock_rt;
     std::cout << "  [PASS] Runtime injection and vtable call verified." << std::endl;
 }
-
-K_TEST_CASE("Integration Test Suite for IUserRuntime", test_runtime_interface_integration);

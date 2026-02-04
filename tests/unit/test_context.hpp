@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cassert>
 #include <stdexcept>
 #include "simulator/WinTaskContext.hpp"

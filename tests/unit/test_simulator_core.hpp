@@ -1,3 +1,5 @@
+#pragma once
+
 #include "test_framework.hpp"
 #include <simulator/WinCPUEngine.hpp>
 #include <simulator/WinTaskContext.hpp>
@@ -6,7 +8,7 @@
 #include <kernel/Memory.hpp>
 
 // --- 测试 1: 验证上下文切换的堆栈布局是否符合 Windows ABI ---
-void test_simulator_context_abi()
+void unit_test_simulator_context_abi()
 {
     // 1. 准备阶段：直接实例化具体的上下文实现
     WinTaskContext ctx;
@@ -16,9 +18,9 @@ void test_simulator_context_abi()
     void *stack_top = mock_stack + 4096;
 
     // 模拟参数地址
-    void *entry = (void *)0xDEADC0DE;
-    void *proxy = (void *)0x11112222;
-    void *config = (void *)0x33334444;
+    void *entry = (void *)(uintptr_t)0xDEADC0DE;
+    void *proxy = (void *)(uintptr_t)0x11112222;
+    void *config = (void *)(uintptr_t)0x33334444;
 
     // 3. 预设上下文执行流
     ctx.setup_flow((void (*)())entry, stack_top, nullptr);
@@ -69,7 +71,7 @@ void test_simulator_context_abi()
 }
 
 // --- 测试 2: 物理内存读写一致性 ---
-void test_simulator_memory_layout()
+void unit_test_simulator_memory_layout()
 {
     size_t mem_size = 1024 * 1024; // 1MB
     void *base = malloc(mem_size);
@@ -86,7 +88,3 @@ void test_simulator_memory_layout()
 
     free(base);
 }
-
-// 注册测试用例
-K_TEST_CASE("Simulator: Context ABI Integrity", test_simulator_context_abi);
-K_TEST_CASE("Simulator: Physical Memory Map", test_simulator_memory_layout);

@@ -40,12 +40,14 @@ struct TaskExecutionInfo
 class KStackBuffer;
 struct TaskResourceConfig
 {
-    KStackBuffer *stack; // 不再是裸指针，而是受管对象
     TaskPriority priority;
+    KStackBuffer *stack; // 不再是裸指针，而是受管对象
 
     TaskResourceConfig()
-        : stack(nullptr),
-          priority(TaskPriority::NORMAL) {}
+        : priority(TaskPriority::NORMAL), stack(nullptr) {}
+
+    TaskResourceConfig(TaskPriority priority, KStackBuffer *stack)
+        : priority(priority), stack(stack) {}
 };
 
 /**

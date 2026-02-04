@@ -1,8 +1,10 @@
+#pragma once
+
 #include <common/ZImg.hpp>
 #include <iostream>
 #include "test_framework.hpp"
 
-void test_zimg_header_integrity()
+void unit_test_zimg_header_integrity()
 {
     // 模拟一个 ZImgHeader
     ZImgHeader header = {0};
@@ -22,7 +24,7 @@ void test_zimg_header_integrity()
     std::cout << "  [PASS] ZImg Protocol Integrity Verified." << std::endl;
 }
 
-void test_compact_pe_loading()
+void unit_test_compact_pe_loading()
 {
     // 模拟 0x260 这种紧凑布局
     uintptr_t entry_rva = 0x260;
@@ -36,6 +38,3 @@ void test_compact_pe_loading()
 
     std::cout << "  [PASS] Compact PE Entry (0x260) verified." << std::endl;
 }
-
-K_TEST_CASE("Compact PE Entry", test_compact_pe_loading);
-K_TEST_CASE("ZImg Protocol Integrity", test_zimg_header_integrity);

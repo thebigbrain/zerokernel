@@ -13,15 +13,18 @@ private:
     ITaskContextFactory *_context_factory;
     void *_default_exit_router;
 
-    BitmapIdGenerator<64> *_id_gen; // 建议加上下划线保持风格一致
+    IIdGenerator *_id_gen; // 建议加上下划线保持风格一致
 
 public:
-    SimpleTaskFactory(IObjectBuilder *b, ITaskContextFactory *context_factory, void *exit_router)
+    SimpleTaskFactory(
+        IObjectBuilder *b,
+        ITaskContextFactory *context_factory,
+        IIdGenerator *id_gen,
+        void *exit_router = nullptr)
         : _builder(b),
           _context_factory(context_factory),
-          _default_exit_router(exit_router)
-    {
-    }
+          _default_exit_router(exit_router),
+          _id_gen(id_gen) {}
 
     ITaskControlBlock *create_tcb(
         const TaskExecutionInfo &exec_info,

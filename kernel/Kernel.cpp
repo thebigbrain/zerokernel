@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring> // 修复原代码中 memcpy 未包含头文件的问题
+#include <new>
 
 #include "Kernel.hpp"
 #include "KernelProxy.hpp"
@@ -13,6 +14,8 @@
 #include "RoundRobinStrategy.hpp"
 #include "KernelHeapAllocator.hpp"
 #include "KernelObjectBuilder.hpp"
+#include "AsyncSchedulingEngine.hpp"
+#include "SimpleSchedulingControl.hpp"
 
 extern "C" void task_exit_router();
 
@@ -25,16 +28,21 @@ void Kernel::bootstrap()
     spawn_initial_tasks();
 
     // 引擎运转
-    _engine->start();
+    start_engine();
 }
 
 void Kernel::setup_infrastructure()
 {
     // 1. 建立运行时堆 (从静态分配器中划拨 128MB)
-    size_t heap_size = 128 * 1024 * 1024;
+    size_t heap_size = 16 * 1024 * 1024;
     void *heap_mem = _static_allocator->allocate(heap_size);
-    // 直接在划拨的内存上原地构造堆管理器
-    _runtime_heap = new (heap_mem) KernelHeapAllocator(heap_mem, heap_size);
+
+    // 关键修复：堆管理器只管理除去自身大小之后的空间
+    // 假设 KernelHeapAllocator 内部逻辑是从 base 开始管理
+    void *actual_managed_start = (uint8_t *)heap_mem + sizeof(KernelHeapAllocator);
+    size_t actual_managed_size = heap_size - sizeof(KernelHeapAllocator);
+
+    _runtime_heap = new (heap_mem) KernelHeapAllocator(actual_managed_start, actual_managed_size);
 
     // 2. 建立业务构建器 (从静态分配器中划拨 Builder 所需空间)
     void *builder_mem = _static_allocator->allocate(sizeof(KernelObjectBuilder));
@@ -44,14 +52,20 @@ void Kernel::setup_infrastructure()
     // 所有的组件现在都统一收纳在 Kernel 内部
     _bus = _builder->construct<MessageBus>(_builder);
 
+    _bus->subscribe(MessageType::EVENT_PRINT, BIND_MESSAGE_CB(Kernel, handle_event_print, this));
+
+    auto id_gen = _builder->construct<BitmapIdGenerator<64>>();
     // 注入 builder 即可，Factory 内部需要资源时，Kernel 会提供辅助
-    _tcb_factory = _builder->construct<SimpleTaskFactory>(_builder, _task_context_factory, task_exit_router);
+    _tcb_factory = _builder->construct<SimpleTaskFactory>(_builder, _task_context_factory, id_gen, task_exit_router);
 
     _strategy = _builder->construct<RoundRobinStrategy>(_builder);
     _lifecycle = _builder->construct<SimpleTaskLifecycle>(_builder, _tcb_factory);
+    _scheduling_control = _builder->construct<SimpleSchedulingControl>(_lifecycle);
 
     // 组装 Service
     _task_service = _builder->construct<TaskService>(_lifecycle, _strategy, _bus);
+
+    _engine = _builder->construct<AsyncSchedulingEngine>(_lifecycle, _scheduling_control, _strategy);
 }
 
 void Kernel::spawn_initial_tasks()

@@ -11,18 +11,19 @@ private:
     size_t _active_objects = 0; // 内核存活对象计数
 
 public:
-    using IObjectBuilder::IObjectBuilder;
-
-    template <typename T, typename... Args>
-    T *construct(Args &&...args)
+    KernelObjectBuilder(IAllocator *alloc)
+        : IObjectBuilder(alloc)
     {
-        T *ptr = IObjectBuilder::construct<T>(args...);
-        if (ptr)
-        {
-            _active_objects++; // 每次成功创建，计数加一
-            // 甚至可以记录 T 的名称，用于内核调试输出 (ls-objects)
-        }
-        return ptr;
+    }
+
+    // 增加一个虚函数确保虚表存在
+    virtual ~KernelObjectBuilder() {}
+
+    void on_object_created() override
+    {
+        _active_objects++;
+        // 这里以后可以放 [2026-02-03] 要求的 OID 递增逻辑
+        // std::cout << "Object created, total active: " << _active_objects << std::endl;
     }
 
     template <typename T>

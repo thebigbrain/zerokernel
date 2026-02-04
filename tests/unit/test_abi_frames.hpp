@@ -1,9 +1,11 @@
+#pragma once
+
 #include "test_framework.hpp"
 #include <simulator/WinCPUEngine.hpp>
 #include <simulator/WinTaskContext.hpp>
 #include <simulator/WinX64Regs.hpp>
 
-void test_shadow_space_and_alignment_contract()
+void unit_test_shadow_space_and_alignment_contract()
 {
     // 1. 实例化具体的上下文（不再依赖 CPUEngine）
     WinTaskContext ctx;
@@ -55,5 +57,3 @@ void test_shadow_space_and_alignment_contract()
     _aligned_free(stack_mem);
     std::cout << "  [PASS] Shadow Space and Alignment Contract Verified." << std::endl;
 }
-
-K_TEST_CASE("ABI: Shadow Space & Alignment", test_shadow_space_and_alignment_contract);

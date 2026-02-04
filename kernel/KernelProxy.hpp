@@ -18,12 +18,16 @@ public:
     // 消息投递：依然是透传给总线
     void publish(const Message &msg) override
     {
+        if (!_bus)
+            return;
         _bus->publish(msg);
     }
 
     // 协作调度：转交给任务管理器
     void yield() override
     {
+        if (!_sched)
+            return;
         // 领域语义：任务请求让出执行权，管理器决定切给谁
         _sched->yield_current_task();
     }

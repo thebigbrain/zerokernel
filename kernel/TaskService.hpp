@@ -3,7 +3,7 @@
 #include "ITaskLifecycle.hpp"
 #include "ISchedulingStrategy.hpp"
 #include "IMessageBus.hpp"
-#include "Defs.hpp"
+#include "MessageCallback.hpp"
 
 class TaskService
 {

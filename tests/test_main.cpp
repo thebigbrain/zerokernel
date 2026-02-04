@@ -24,7 +24,7 @@ int main()
     {
         // 打印正在运行的状态，注意不加 std::endl
         // 使用 left 对齐，给测试名留出 40 个字符的空间
-        std::cout << "[ RUN      ] " << std::left << std::setw(40) << test.name << std::flush;
+        std::cout << "[ RUN      ] " << std::left << std::setw(50) << test.name << std::flush;
 
         try
         {
@@ -36,7 +36,7 @@ int main()
         catch (const std::exception &e)
         {
             std::cout << "\r" << COLOR_RED << "[  FAILED  ] " << COLOR_RESET << std::left << std::setw(40) << test.name
-                      << " (" << COLOR_YELLOW << e.what() << COLOR_RESET << ")" << std::endl;
+                      << " {" << COLOR_YELLOW << e.what() << COLOR_RESET << "}" << std::endl;
             failed++;
         }
         catch (...)

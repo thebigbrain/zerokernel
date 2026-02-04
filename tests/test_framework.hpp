@@ -30,7 +30,7 @@ inline void register_test(const std::string &name, TestFunc func)
 
 // 宏定义：## 用于连接符，保证变量名唯一
 // 使用 do-while(0) 结构可以增加宏的安全性
-#define K_TEST_CASE(desc, func) \
+#define K_TEST_CASE(func, desc) \
     static bool func##_registered = []() { \
         register_test(desc, func); \
         return true; }()
