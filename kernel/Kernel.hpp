@@ -19,6 +19,8 @@
 class Kernel
 {
 private:
+    friend class KernelInspector;
+
     // 基础依赖
     ICPUEngine *_cpu;
     StaticLayoutAllocator *_static_allocator; // 初始静态分配器
@@ -63,15 +65,6 @@ public:
     void start_engine();
 
     void bootstrap();
-
-    IMessageBus *get_message_bus() const { return _bus; }
-    ITaskLifecycle *get_task_lifecycle() const { return _lifecycle; }
-    TaskService *get_task_service() const { return _task_service; }
-    ICPUEngine *get_cpu() const { return _cpu; }
-    IAllocator *get_runtime_heap() const { return _runtime_heap; }
-    IObjectBuilder *get_object_builder() const { return _builder; }
-
-    ISchedulingStrategy *get_scheduling_strategy() const { return _strategy; }
 
 private:
     KStackBuffer *create_stack(size_t size)
