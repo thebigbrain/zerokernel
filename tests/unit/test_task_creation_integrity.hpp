@@ -9,8 +9,9 @@
 
 void unit_test_task_creation_integrity()
 {
-    Kernel *kernel = create_mock_kernel(32 * 1024);
-    KernelInspector inspector(kernel);
+    Mock mock(32 * 1024);
+    Kernel *kernel = mock.kernel();
+    KernelInspector inspector = mock.inspect();
 
     kernel->setup_infrastructure();
 
