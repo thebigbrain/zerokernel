@@ -52,7 +52,6 @@ private:
     IAllocator *_runtime_heap;                // 稍后建立的动态堆
     IObjectBuilder *_builder;                 // 稍后建立的业务构建器
 
-    ITaskContextFactory *_task_context_factory;
     ITaskControlBlockFactory *_tcb_factory;
 
     // 领域组件
@@ -114,7 +113,7 @@ public:
 
         auto id_gen = _builder->construct<BitmapIdGenerator<64>>();
         // 注入 builder 即可，Factory 内部需要资源时，Kernel 会提供辅助
-        _tcb_factory = _builder->construct<SimpleTaskFactory>(_builder, _task_context_factory, id_gen);
+        _tcb_factory = _builder->construct<SimpleTaskFactory>(_builder, _platform_hooks->task_context_factory, id_gen);
 
         _strategy = _builder->construct<RoundRobinStrategy>(_builder);
         _lifecycle = _builder->construct<SimpleTaskLifecycle>(_builder, _tcb_factory);

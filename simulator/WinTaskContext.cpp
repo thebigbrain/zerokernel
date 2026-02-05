@@ -1,11 +1,12 @@
 #include "WinTaskContext.hpp"
 #include <cstring>
+#include <iostream>
 #include <kernel/ISchedulingControl.hpp>
 
 extern "C" void context_switch_asm(void **old_sp, void *new_sp);
 extern "C" void context_load_asm(void *sp);
 
-static void platform_task_exit_stub()
+void platform_task_exit_stub()
 {
     // 假设可以通过某种方式获取到当前的控制接口
     // 或者直接触发底层 Trap 信号
@@ -26,8 +27,10 @@ void WinTaskContext::transit_to(ITaskContext *target)
 
 void WinTaskContext::jump_to()
 {
+    std::cout << "WinTaskContext::jump_to()" << sp << std::endl;
     // 直接丢弃当前上下文，加载 sp
-    context_load_asm(this->sp);
+    context_load_asm(sp);
+    std::cout << "Target RIP: " << (void *)sp->rip << std::endl;
 }
 
 size_t WinTaskContext::get_context_size() const

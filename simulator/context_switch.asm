@@ -67,8 +67,13 @@ context_load_asm PROC
     pop rbx
     pop rbp
 
-    ; 此时 RSP 经过 12 次弹出，恰好指向结构体最后的 rip
-    ret                  ; 弹出 rip 并跳转到任务入口 (Entry Point)
+    ; 2. 【关键修正】跳过我们在 setup_flow 中留出的 32 字节影子空间
+    ; 如果不跳过，下一步的 ret 会把影子空间的数据当成地址弹出
+    add rsp, 32
+
+    ; 3. 此时 RSP 指向的是你在 setup_flow 中最后压入的 exit_router 
+    ; 或者是你为了让 entry 看起来像被 call 进来而准备的返回地址
+    ret
 context_load_asm ENDP
 
 END

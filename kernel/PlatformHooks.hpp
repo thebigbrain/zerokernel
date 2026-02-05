@@ -1,5 +1,6 @@
 #pragma once
 #include "ISchedulingControl.hpp"
+#include "ITaskContextFactory.hpp"
 #include "ISignal.hpp"
 
 /**
@@ -10,6 +11,7 @@ struct PlatformHooks
 {
     ISchedulingControl *sched_control;
     ISignalDispatcher *dispatcher;
+    ITaskContextFactory *task_context_factory;
 
     // 平台相关的基础行为
     void (*panic)(const char *msg);

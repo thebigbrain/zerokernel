@@ -31,6 +31,12 @@ void run_simulator()
     PlatformHooks hooks;
     hooks.dispatcher = signal_dispatcher;
     hooks.sched_control = sched_control;
+    hooks.task_context_factory = new WinTaskContextFactory();
+    hooks.panic = [](const char *msg)
+    {
+        std::cout << "PANIC: " << msg << std::endl;
+        ExitProcess(1);
+    };
 
     kmain(layout, info, &hooks);
 
