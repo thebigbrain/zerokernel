@@ -9,6 +9,7 @@
 #include "unit/test_kernel_proxy.hpp"
 #include "unit/test_task_factory.hpp"
 #include "unit/test_task_creation_integrity.hpp"
+#include "unit/test_bootstrap.hpp"
 
 // --- 基础引导与协议层 ---
 K_TEST_CASE(unit_test_compact_pe_loading, "Compact PE Entry");
@@ -30,6 +31,7 @@ K_TEST_CASE(unit_test_message_system_integrity, "[Step 3] MessageBus: Pub-Sub Fl
 K_TEST_CASE(unit_test_kernel_proxy_behavior, "KernelProxy: API Forwarding");
 
 K_TEST_CASE(unit_test_task_creation_integrity, "Task Creation Integrity");
+K_TEST_CASE(unit_test_bootstrap, "Kernel: Bootstrap");
 
 // --- 最终全链路启动测试 ---
-// K_TEST_CASE(test_full_kernel_event_flow,               "Kernel: RootTask to Print Event Dispatch");
+// K_TEST_CASE(, "Kernel: RootTask to Print Event Dispatch");

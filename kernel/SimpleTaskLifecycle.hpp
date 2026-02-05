@@ -71,8 +71,16 @@ public:
     }
 
     ITaskControlBlock *get_current_task() const override { return _current_task; }
+    void set_current_task(ITaskControlBlock *tcb) override { _current_task = tcb; }
+
     size_t get_task_count() const override { return _task_count; }
 
     // 供调度引擎切换上下文时更新
-    void set_current_task(ITaskControlBlock *tcb) { _current_task = tcb; }
+
+    void enumerate_tasks(ITaskVisitor &visitor) const override
+    {
+        const_cast<KList<ITaskControlBlock *> &>(_all_tasks)
+            .for_each([&visitor](ITaskControlBlock *tcb)
+                      { visitor.visit(tcb); });
+    }
 };

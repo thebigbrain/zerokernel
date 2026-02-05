@@ -32,8 +32,7 @@ ITaskControlBlock *SimpleTaskFactory::create_tcb(
     // 注入入口点、对齐后的栈顶、以及任务退出时的跳转地址
     ctx->setup_flow(
         reinterpret_cast<void (*)()>(exec_info.entry),
-        stack->get_aligned_top(),
-        reinterpret_cast<void (*)()>(_default_exit_router));
+        stack->get_aligned_top());
 
     // 注入参数：ABI 约定
     // 第一个参数通常存放 Runtime 指针，第二个参数存放任务配置

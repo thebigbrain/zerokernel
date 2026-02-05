@@ -16,28 +16,41 @@ private:
     void *_ram_base;
     size_t _ram_size;
     Kernel *_kernel;
-    KernelInspector *_inspector; // 集成 Inspector
+
+    PlatformHooks *_platform_hooks;
+    BootInfo _boot_info;
 
 public:
-    Mock(size_t mem_size) : _ram_size(mem_size), _kernel(nullptr), _inspector(nullptr)
+    Mock(size_t mem_size) : _ram_size(mem_size), _kernel(nullptr)
     {
         // 1. 模拟物理内存申请
         _ram_base = ::operator new(mem_size, std::align_val_t{16});
+        _boot_info = create_mock_boot_info(_ram_base, _ram_size);
 
-        _kernel = create_mock_kernel(_ram_size);
+        // 2. 物理布局与内核实例化
+        PhysicalMemoryLayout layout{_ram_base, _ram_size};
+        auto static_allocator = StaticLayoutAllocator::create(layout);
 
-        _inspector = new KernelInspector(_kernel);
+        void *k_mem = static_allocator->allocate(sizeof(Kernel));
+        _kernel = new (k_mem) Kernel(static_allocator, _boot_info, _platform_hooks);
     }
 
     ~Mock()
     {
-        // 注意：由于是 Placement New，需要显式调用析构
-        if (_inspector)
-            _inspector->~KernelInspector();
         if (_kernel)
             _kernel->~Kernel();
         if (_ram_base)
             ::operator delete(_ram_base, std::align_val_t{16});
+    }
+
+    const BootInfo &get_boot_info()
+    {
+        return _boot_info;
+    }
+
+    void *get_ram_start()
+    {
+        return _ram_base;
     }
 
     // --- 模拟器对外接口 ---
@@ -45,42 +58,10 @@ public:
     // 获取内核实例进行操作
     Kernel *kernel() { return _kernel; }
 
-    // 获取检查员进行状态断言
-    const KernelInspector &inspect() const { return *_inspector; }
-
     // 硬件级信息
     size_t total_ram() const { return _ram_size; }
 
 private:
-    Kernel *create_mock_kernel(size_t mem_size = 64 * 1024)
-    {
-        // --- 1. 这里的数组就是 pool 的来源 ---
-        // 我们在栈上开辟 16KB 空间作为“物理内存”
-        void *memory_pool = ::operator new(mem_size, std::align_val_t{16});
-
-        // --- 2. 提取 base 和 size ---
-        void *pool_base = memory_pool;
-        size_t pool_size = mem_size;
-
-        // --- 3. 注入到 BootInfo ---
-        // 这样 Kernel 就能通过 BootInfo 知道“我有 16KB 内存可用”
-        BootInfo boot_info = create_mock_boot_info(pool_base, pool_size);
-
-        // --- 4. 同时注入到物理布局逻辑 ---
-        PhysicalMemoryLayout layout{pool_base, pool_size};
-
-        auto static_allocator = StaticLayoutAllocator::create(layout);
-        Kernel *kernel = new (static_allocator->allocate(sizeof(Kernel))) Kernel(static_allocator);
-        K_ASSERT(kernel != nullptr, "kernel is null");
-
-        BootInfo info = create_mock_boot_info(pool_base, pool_size);
-
-        kernel->set_boot_info(&info);
-        kernel->set_context_factory(new MockTaskContextFactory());
-
-        return kernel;
-    }
-
     // 模拟外部段表数据
     ZImgSection mock_sections[2] = {
         {".text", 1, 0, 0x1000, 4096},
@@ -97,7 +78,7 @@ private:
 
         // 绑定真实的测试函数地址
         info.root_task_entry = [](void *rt, void *arg) { /* root logic */ };
-        info.idle_task_entry = [](void *arg) { /* idle logic */ };
+        info.idle_task_entry = [](void *rt, void *arg) { /* idle logic */ };
 
         // 资源定位 Mock
         info.config_ptr = nullptr; // 暂时留空

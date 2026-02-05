@@ -5,8 +5,9 @@ enum class MessageType : uint32_t
 {
     NONE = 0,
     SYS_LOAD_TASK = 1,
-    EVENT_KEYBOARD = 2,
-    EVENT_PRINT = 0x100
+    KERNEL_EVENT = 0x10,
+    EVENT_KEYBOARD = 0x100,
+    EVENT_PRINT = 0x101
 };
 
 struct alignas(16) Message

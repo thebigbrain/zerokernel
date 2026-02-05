@@ -1,7 +1,6 @@
 #pragma once
 
 #include "test_framework.hpp"
-#include <simulator/WinCPUEngine.hpp>
 #include <simulator/WinTaskContext.hpp>
 #include <simulator/WinX64Regs.hpp>
 
@@ -19,7 +18,7 @@ void unit_test_shadow_space_and_alignment_contract()
     // 3. 执行设置流
     // 假设我们要进入 mock_entry，退出时进入 nullptr（或 exit_stub）
     auto mock_entry = []() { /* 模拟执行 */ };
-    ctx.setup_flow((void (*)())mock_entry, stack_top, nullptr);
+    ctx.setup_flow((void (*)())mock_entry, stack_top);
 
     // --- 核心校验逻辑 ---
 

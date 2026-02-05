@@ -12,6 +12,9 @@ private:
     ISchedulingStrategy *_strategy; // 负责“在哪排队”
     IMessageBus *_message_bus;      // 负责“沟通”
 
+    ITaskControlBlock *_root_task = nullptr;
+    ITaskControlBlock *_idle_task = nullptr;
+
 public:
     TaskService(ITaskLifecycle *lifecycle,
                 ISchedulingStrategy *strategy,
@@ -23,9 +26,39 @@ public:
     }
 
     /**
+     * @brief 绑定系统核心任务
+     * 由 Kernel 在引导期间调用，传入已经静态分配好的 TCB
+     */
+    void bind_core_tasks(ITaskControlBlock *root, ITaskControlBlock *idle)
+    {
+        _root_task = root;
+        _idle_task = idle;
+
+        // 系统任务通常也要进入调度策略，以便在没有业务任务时切换到 Idle
+        if (_root_task)
+            _strategy->make_task_ready(_root_task);
+        if (_idle_task)
+            _strategy->make_task_ready(_idle_task);
+    }
+
+    ITaskControlBlock *get_root_task() const { return _root_task; }
+    ITaskControlBlock *get_idle_task() const { return _idle_task; }
+
+    /**
+     * @brief 遍历系统中所有存在的任务（包括就绪、阻塞或运行中）
+     */
+    void inspect_all_tasks(ITaskVisitor &visitor) const
+    {
+        if (_lifecycle)
+        {
+            _lifecycle->enumerate_tasks(visitor);
+        }
+    }
+
+    /**
      * 业务处理逻辑：从消息解析意图
      */
-    void TaskService::handle_spawn_request(const Message &msg)
+    void handle_spawn_request(const Message &msg)
     {
         auto *params = reinterpret_cast<const TaskSpawnParams *>(msg.payload);
 
@@ -46,6 +79,9 @@ public:
      */
     void kill_task_by_id(uint32_t task_id)
     {
+        if (task_id == _root_task->get_id())
+            return;
+
         ITaskControlBlock *tcb = _lifecycle->get_task(task_id);
         if (tcb)
         {

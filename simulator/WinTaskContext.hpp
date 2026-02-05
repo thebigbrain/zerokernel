@@ -1,5 +1,5 @@
 #pragma once
-#include <kernel/ICPUEngine.hpp>
+#include <kernel/ITaskContext.hpp>
 #include <cstdint>
 #include "WinX64Regs.hpp"
 
@@ -36,7 +36,7 @@ public:
     void load_argument(size_t index, uintptr_t value) override;
 
     // 移除多余的类名前缀
-    void setup_flow(void (*entry)(), void *stack_top, void (*exit_router)()) override;
+    void setup_flow(void (*entry)(), void *stack_top) override;
 
     void *get_stack_pointer() const override { return sp; }
 };

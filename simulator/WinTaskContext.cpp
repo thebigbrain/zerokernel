@@ -1,8 +1,17 @@
 #include "WinTaskContext.hpp"
 #include <cstring>
+#include <kernel/ISchedulingControl.hpp>
 
 extern "C" void context_switch_asm(void **old_sp, void *new_sp);
 extern "C" void context_load_asm(void *sp);
+
+static void platform_task_exit_stub()
+{
+    // 假设可以通过某种方式获取到当前的控制接口
+    // 或者直接触发底层 Trap 信号
+    extern ISchedulingControl *g_platform_sched_ctrl;
+    g_platform_sched_ctrl->terminate_current_task();
+}
 
 void WinTaskContext::transit_to(ITaskContext *target)
 {
@@ -26,14 +35,14 @@ size_t WinTaskContext::get_context_size() const
     return sizeof(WinX64Regs);
 }
 
-void WinTaskContext::setup_flow(void (*entry)(), void *stack_top, void (*exit_router)())
+void WinTaskContext::setup_flow(void (*entry)(), void *stack_top)
 {
     // 1. 初始对齐 (16n)
     uintptr_t curr = reinterpret_cast<uintptr_t>(stack_top) & ~0xFULL;
 
     // 2. 压入 Exit Router 和 影子空间
     curr -= 8;
-    *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(exit_router);
+    *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(platform_task_exit_stub);
     curr -= 32;
 
     // 3. 放置寄存器上下文 (88字节)

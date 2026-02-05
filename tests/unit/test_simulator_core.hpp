@@ -1,7 +1,6 @@
 #pragma once
 
 #include "test_framework.hpp"
-#include <simulator/WinCPUEngine.hpp>
 #include <simulator/WinTaskContext.hpp>
 #include <simulator/WinX64Regs.hpp>
 #include <cassert>
@@ -23,7 +22,7 @@ void unit_test_simulator_context_abi()
     void *config = (void *)(uintptr_t)0x33334444;
 
     // 3. 预设上下文执行流
-    ctx.setup_flow((void (*)())entry, stack_top, nullptr);
+    ctx.setup_flow((void (*)())entry, stack_top);
 
     // 4. 加载符合 Win x64 ABI 的参数 (RCX, RDX)
     ctx.load_argument(0, (uintptr_t)proxy);  // 应存入寄存器镜像的 RCX

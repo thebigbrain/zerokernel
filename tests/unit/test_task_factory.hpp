@@ -22,7 +22,6 @@ inline void unit_test_task_factory_integrity()
     // 2. 准备依赖组件
     auto *ctx_factory = builder.construct<MockTaskContextFactory>();
     auto *id_gen = builder.construct<BitmapIdGenerator<64>>();
-    void *exit_router = (void *)(uintptr_t)0xDEADBEEF;
 
     // 3. 构造工厂 (核心：检查这里是否正确传入了所有指针)
     // 假设 SimpleTaskFactory 的构造函数签名是：
@@ -30,8 +29,7 @@ inline void unit_test_task_factory_integrity()
     auto *factory = builder.construct<SimpleTaskFactory>(
         &builder,
         ctx_factory,
-        id_gen,
-        exit_router);
+        id_gen);
 
     // 4. 模拟任务配置
     TaskExecutionInfo exec{(TaskEntry)0x1234, nullptr, nullptr};

@@ -2,7 +2,7 @@
 
 #include "test_framework.hpp"
 #include "kernel/Kernel.hpp"
-#include "kernel/KernelInspector.hpp"
+#include "inspect/KernelInspector.hpp"
 #include "common/TaskTypes.hpp"
 
 #include "mock/mock.hpp"
@@ -11,19 +11,19 @@ void unit_test_task_creation_integrity()
 {
     Mock mock(32 * 1024);
     Kernel *kernel = mock.kernel();
-    KernelInspector inspector = mock.inspect();
+    KernelInspector inspector(kernel);
 
     kernel->setup_infrastructure();
 
-    auto lifecycle = inspector.get_task_lifecycle();
+    auto lifecycle = inspector.lifecycle();
     K_ASSERT(lifecycle != nullptr, "Task lifecycle is null.");
 
-    auto builder = inspector.get_object_builder();
-    auto strategy = inspector.get_scheduling_strategy();
+    auto builder = inspector.builder();
+    auto strategy = inspector.strategy();
 
     TaskExecutionInfo exec{};
     TaskResourceConfig res{};
-    res.stack = builder->construct<KStackBuffer>(inspector.get_runtime_heap(), 1024);
+    res.stack = builder->construct<KStackBuffer>(inspector.heap(), 1024);
     ITaskControlBlock *tcb = lifecycle->spawn_task(exec, res);
     K_ASSERT(tcb != nullptr, "Task is null.");
 

@@ -5,6 +5,7 @@
 class KernelHeapAllocator : public IAllocator
 {
 private:
+    friend class HeapInspector;
     struct HeapBlock
     {
         size_t size;

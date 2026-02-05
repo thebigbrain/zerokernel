@@ -11,7 +11,6 @@ class SimpleTaskFactory : public ITaskControlBlockFactory
 private:
     IObjectBuilder *_builder; // 核心构建器
     ITaskContextFactory *_context_factory;
-    void *_default_exit_router;
 
     IIdGenerator *_id_gen; // 建议加上下划线保持风格一致
 
@@ -19,11 +18,9 @@ public:
     SimpleTaskFactory(
         IObjectBuilder *b,
         ITaskContextFactory *context_factory,
-        IIdGenerator *id_gen,
-        void *exit_router = nullptr)
+        IIdGenerator *id_gen)
         : _builder(b),
           _context_factory(context_factory),
-          _default_exit_router(exit_router),
           _id_gen(id_gen) {}
 
     ITaskControlBlock *create_tcb(

@@ -11,7 +11,7 @@ struct BootInfo
 
     // 约定的入口指针
     void (*root_task_entry)(void *rt, void *arg);
-    void (*idle_task_entry)(void *arg);
+    void (*idle_task_entry)(void *rt, void *arg);
 
     // 约定的资源位置
     void *config_ptr;
