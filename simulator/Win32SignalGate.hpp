@@ -29,13 +29,13 @@ public:
     void activate() override
     {
         _active = true;
-        std::cout << "[Win32 Dispatcher] Signals Activated." << std::endl;
+        std::cout << "[Win32 SignalGate] Signals Activated." << std::endl;
     }
 
     void deactivate() override
     {
         _active = false;
-        std::cout << "[Win32 Dispatcher] Signals Deactivated." << std::endl;
+        std::cout << "[Win32 SignalGate] Signals Deactivated." << std::endl;
     }
 
     /**

@@ -143,6 +143,7 @@ public:
         // 1. 获取预先静态分配好的 RootTask
         // RootTask 及其 TaskContext 在 setup_infrastructure() 中已完成静态绑定
         ITaskControlBlock *root_tcb = _task_service->get_root_task();
+        ITaskControlBlock *idle_tcb = _task_service->get_idle_task();
 
         if (root_tcb == nullptr)
         {
@@ -163,7 +164,9 @@ public:
         // 4. 执行物理跳转（不归路）
         // 从 RootTask 的 Archive 中提取初始上下文（SP, PC, Registers）并覆盖当前 CPU 状态
         // 此行代码执行后，CPU 将跳转到 RootTask 的入口点执行
-        root_tcb->get_context()->jump_to();
+
+        idle_tcb->get_context()->transit_to(root_tcb->get_context());
+        // root_tcb->get_context()->jump_to();
 
         // --- 逻辑真空区 ---
         // 正常情况下，CPU 永远不会执行到这里。

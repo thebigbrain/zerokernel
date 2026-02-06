@@ -21,17 +21,12 @@ public:
     virtual void transit_to(ITaskContext *target) = 0;
 
     /**
-     * 初始启动：不需要保存，直接加载 target 的状态
-     */
-    virtual void jump_to() = 0;
-
-    /**
      * 配置执行流的基础要素
      * @param entry 任务入口点
      * @param stack_top 栈顶指针（通常是分配好的内存最高处）
      * @param exit_stub 任务结束后的回归地址（内核路由）
      */
-    virtual void setup_flow(void (*entry)(), void *stack_top) = 0;
+    virtual void setup_flow(void (*entry)(void *, void *), void *stack_top) = 0;
 
     /**
      * 载入初始化参数

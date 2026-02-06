@@ -1,12 +1,12 @@
-; Windows x64 Calling Convention
+; ==============================================================================
+; Windows x64 Context Switching Module
+; ==============================================================================
+
 .code
 
-; context_switch_asm(void **old_sp, void *new_sp)
-; rcx = old_sp (存储旧栈顶的地址), rdx = new_sp (新栈顶的值)
-context_switch_asm PROC
-    ; --- 1. 保存内核现场 ---
-    ; 此时 [rsp] 是返回地址 (对应结构体的 rip)
-    ; 按照结构体从后往前的顺序 PUSH (栈向下增长)
+; --- 语义化宏：保存寄存器上下文 ---
+; 按照 WinX64Regs 结构体从后往前的顺序压栈
+SAVE_WIN_X64_CONTEXT MACRO
     push rbp
     push rbx
     push rdi
@@ -19,15 +19,11 @@ context_switch_asm PROC
     push r8
     push rdx
     push rcx
+ENDM
 
-    ; 此时内核栈的布局与 WinX64Regs 完全一致
-    mov [rcx], rsp       ; 保存当前栈顶到 g_saved_kernel_sp
-
-    ; --- 2. 切换到新任务 ---
-    mov rsp, rdx         ; 载入 Root Task 的栈顶
-
-    ; --- 3. 恢复新任务现场 ---
-    ; 按照结构体从前往后的顺序 POP
+; --- 语义化宏：恢复寄存器上下文 ---
+; 按照 WinX64Regs 结构体从前往后的顺序出栈
+RESTORE_WIN_X64_CONTEXT MACRO
     pop rcx
     pop rdx
     pop r8
@@ -40,40 +36,52 @@ context_switch_asm PROC
     pop rdi
     pop rbx
     pop rbp
+ENDM
 
-    ; --- 4. 此时 RSP 指向 rip ---
-    ret                  ; 弹出并跳转到任务入口
+; ------------------------------------------------------------------------------
+; context_switch_asm(void **old_sp, void *new_sp)
+; RCX = old_sp, RDX = new_sp
+; ------------------------------------------------------------------------------
+context_switch_asm PROC
+    ; 1. 语义化保存：将当前内核/任务现场压入旧栈
+    SAVE_WIN_X64_CONTEXT
+
+    ; 2. 状态保存：将旧栈顶指针存入 old_sp 指向的内存
+    mov [rcx], rsp
+
+    ; 3. 语义化切换：载入新任务的栈指针
+    mov rsp, rdx
+
+    ; 4. 语义化恢复：从新栈弹出目标任务现场
+    RESTORE_WIN_X64_CONTEXT
+
+    pop rax         ; 弹出 entry_func 到 rax，此时 RSP 增加 8
+    ; 此时 RSP 正好指向你 setup 时预留的 32 字节影子空间的起始位置
+    
+    jmp rax         ; 直接跳入任务，不再动 RSP
 context_switch_asm ENDP
 
+; ------------------------------------------------------------------------------
 ; context_load_asm(void* new_sp)
-; rcx = new_sp (指向 WinX64Regs 结构体的起始地址)
-context_load_asm PROC
-    mov rsp, rcx         ; 切换栈指针到寄存器镜像区域
+; RCX = new_sp
+; ------------------------------------------------------------------------------
+; context_load_asm PROC
+;     ; 1. 语义化切换：直接抛弃当前栈，强行切换到 new_sp
+;     mov rsp, rcx
 
-    ; 按照 WinX64Regs 结构体定义的顺序弹出
-    ; 内存地址：低 -> 高
-    ; 弹出顺序：rcx -> rdx -> r8 -> r9 -> r15... -> rbp -> rip
-    pop rcx              ; 弹出第一个参数
-    pop rdx              ; 弹出第二个参数
-    pop r8               ; 弹出第三个参数
-    pop r9               ; 弹出第四个参数
+;     ; 2. 语义化恢复：弹出预设的任务现场
+;     RESTORE_WIN_X64_CONTEXT
+
+;     ; 2. 此时 RSP 指向结构体里的 rip 成员
+;     ; 我们把 rip 读入一个临时寄存器，并跳过它
+;     pop rax         ; rax = entry_func, RSP 现在指向影子空间开头 (...FFE8)
     
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop rsi
-    pop rdi
-    pop rbx
-    pop rbp
-
-    ; 2. 【关键修正】跳过我们在 setup_flow 中留出的 32 字节影子空间
-    ; 如果不跳过，下一步的 ret 会把影子空间的数据当成地址弹出
-    add rsp, 32
-
-    ; 3. 此时 RSP 指向的是你在 setup_flow 中最后压入的 exit_router 
-    ; 或者是你为了让 entry 看起来像被 call 进来而准备的返回地址
-    ret
-context_load_asm ENDP
+;     ; 3. 【关键】补偿影子空间带来的偏移
+;     ; 我们直接把 RSP 挪到影子空间的上方，紧贴着 exit_stub
+;     add rsp, 32     ; 现在 RSP = ...0008 (指向 exit_stub)
+    
+;     ; 4. 跳转进入任务
+;     jmp rax         ; 任务函数开始运行，它会自己向下开辟 32 字节使用
+; context_load_asm ENDP
 
 END

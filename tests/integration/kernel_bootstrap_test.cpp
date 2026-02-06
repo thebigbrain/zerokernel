@@ -10,6 +10,7 @@
 #include "unit/test_task_factory.hpp"
 #include "unit/test_task_creation_integrity.hpp"
 #include "unit/test_bootstrap.hpp"
+#include "unit/test_context_jump_and_abi_integrity.hpp"
 
 // --- 基础引导与协议层 ---
 K_TEST_CASE(unit_test_compact_pe_loading, "Compact PE Entry");
@@ -21,6 +22,7 @@ K_TEST_CASE(unit_test_simulator_memory_layout, "Simulator: Physical Memory Map")
 
 // --- 架构与 ABI 契约 ---
 K_TEST_CASE(unit_test_shadow_space_and_alignment_contract, "ABI: Shadow Space & Alignment");
+K_TEST_CASE(unit_test_context_switch_lifecycle, "ABI: Context Jump & ABI Integrity");
 
 // --- 核心领域模型 (Unit Contracts) ---
 K_TEST_CASE(unit_test_klist_allocation, "[Step 1] Running Unit Contract: KList");

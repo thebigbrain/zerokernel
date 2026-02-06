@@ -13,11 +13,18 @@ private:
     // 这里我们先支持 4 个寄存器参数
     uintptr_t m_args[4] = {0, 0, 0, 0};
 
+    void *entry_func = nullptr;
+    void *stack_top = nullptr;
+
+    void *_exit_stub = nullptr;
+    uint32_t _shadow_space_size = 32;
+
     void update_regs_from_args();
 
 public:
+    WinTaskContext() : WinTaskContext(nullptr, 32) {}
     // 构造函数
-    WinTaskContext() = default;
+    WinTaskContext(void *exit_stub, uint32_t shadow_space_size = 32);
 
     size_t get_context_size() const;
 
@@ -28,15 +35,13 @@ public:
      */
     void transit_to(ITaskContext *target);
 
-    /**
-     * 初始启动：不需要保存，直接加载 target 的状态
-     */
-    void jump_to();
-
     void load_argument(size_t index, uintptr_t value) override;
 
     // 移除多余的类名前缀
-    void setup_flow(void (*entry)(), void *stack_top) override;
+    void setup_flow(void (*entry)(void *, void *), void *stack_top) override;
 
     void *get_stack_pointer() const override { return sp; }
+
+private:
+    void setup_registers();
 };

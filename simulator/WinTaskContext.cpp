@@ -1,10 +1,11 @@
 #include "WinTaskContext.hpp"
+#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <kernel/ISchedulingControl.hpp>
 
 extern "C" void context_switch_asm(void **old_sp, void *new_sp);
-extern "C" void context_load_asm(void *sp);
+// extern "C" void context_load_asm(void *sp);
 
 void platform_task_exit_stub()
 {
@@ -12,6 +13,20 @@ void platform_task_exit_stub()
     // 或者直接触发底层 Trap 信号
     extern ISchedulingControl *g_platform_sched_ctrl;
     g_platform_sched_ctrl->terminate_current_task();
+}
+
+WinTaskContext::WinTaskContext(void *exit_stub, uint32_t shadow_space_size)
+{
+    if (exit_stub)
+    {
+        this->_exit_stub = exit_stub;
+    }
+    else
+    {
+        this->_exit_stub = platform_task_exit_stub;
+    }
+
+    this->_shadow_space_size = shadow_space_size;
 }
 
 void WinTaskContext::transit_to(ITaskContext *target)
@@ -25,41 +40,44 @@ void WinTaskContext::transit_to(ITaskContext *target)
     context_switch_asm(reinterpret_cast<void **>(&this->sp), next_ctx->sp);
 }
 
-void WinTaskContext::jump_to()
-{
-    std::cout << "WinTaskContext::jump_to()" << sp << std::endl;
-    // 直接丢弃当前上下文，加载 sp
-    context_load_asm(sp);
-    std::cout << "Target RIP: " << (void *)sp->rip << std::endl;
-}
-
 size_t WinTaskContext::get_context_size() const
 {
     return sizeof(WinX64Regs);
 }
 
-void WinTaskContext::setup_flow(void (*entry)(), void *stack_top)
+void WinTaskContext::setup_flow(void (*entry)(void *, void *), void *stack_top)
 {
-    // 1. 初始对齐 (16n)
-    uintptr_t curr = reinterpret_cast<uintptr_t>(stack_top) & ~0xFULL;
+    this->entry_func = entry;
+    this->stack_top = stack_top;
 
-    // 2. 压入 Exit Router 和 影子空间
-    curr -= 8;
-    *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(platform_task_exit_stub);
-    curr -= 32;
-
-    // 3. 放置寄存器上下文 (88字节)
-    curr -= sizeof(WinX64Regs);
-
-    // 4. 初始化结构体
-    this->sp = reinterpret_cast<WinX64Regs *>(curr);
-    memset(this->sp, 0, sizeof(WinX64Regs));
-
-    // 5. 写入关键寄存器
-    this->sp->rip = reinterpret_cast<uintptr_t>(entry);
+    this->setup_registers();
 
     // 6. 将暂存的所有参数一次性写入寄存器镜像
     update_regs_from_args();
+}
+
+void WinTaskContext::setup_registers()
+{
+    uintptr_t curr = reinterpret_cast<uintptr_t>(this->stack_top);
+    curr &= ~0xFULL; // 16n
+
+    // 2. 影子空间 (32字节)
+    // 此时 curr = 16n - 40 = 16n + 8
+    curr -= _shadow_space_size;
+
+    // 1. 退出桩 (8字节)
+    curr -= 8;
+    *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(_exit_stub);
+
+    // 4. 放置结构体 (104字节 = 96字节寄存器 + 8字节RIP)
+    // curr (16n+8) - 104 = 16n - 96 = 16n
+    curr -= sizeof(WinX64Regs);
+
+    this->sp = reinterpret_cast<WinX64Regs *>(curr);
+    memset(this->sp, 0, sizeof(WinX64Regs));
+
+    // 5. 写入入口
+    this->sp->rip = reinterpret_cast<uintptr_t>(this->entry_func);
 }
 
 void WinTaskContext::load_argument(size_t index, uintptr_t value)
