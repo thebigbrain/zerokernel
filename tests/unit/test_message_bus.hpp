@@ -30,5 +30,5 @@ inline void unit_test_message_bus_logic()
     msg.type = MessageType::EVENT_PRINT;
     bus->publish(msg);
 
-    K_ASSERT(g_callback_executed, "MessageBus failed to route message to Callback struct!");
+    K_T_ASSERT(g_callback_executed, "MessageBus failed to route message to Callback struct!");
 }

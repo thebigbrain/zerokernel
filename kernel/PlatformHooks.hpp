@@ -1,4 +1,7 @@
 #pragma once
+
+#include <cstdint>
+#include "diagnostics.hpp"
 #include "ISchedulingControl.hpp"
 #include "ITaskContextFactory.hpp"
 #include "ISignal.hpp"
@@ -14,7 +17,7 @@ struct PlatformHooks
     ITaskContextFactory *task_context_factory;
 
     // 平台相关的基础行为
-    void (*panic)(const char *msg);
+    void (*print)(const char *msg, PRINT_LEVEL level);
     void (*reboot)();
 
     // 内存相关的平台特性

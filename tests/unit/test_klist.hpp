@@ -22,8 +22,8 @@ inline void unit_test_klist_allocation()
     // 如果 StaticLayoutAllocator 分配出的地址不是 8 字节对齐，这里必崩
     list.push_back((void *)0x12345678);
 
-    K_ASSERT(!list.empty(), "List should not be empty");
-    K_ASSERT(list.front() == (void *)0x12345678, "Data mismatch");
+    K_T_ASSERT(!list.empty(), "List should not be empty");
+    K_T_ASSERT(list.front() == (void *)0x12345678, "Data mismatch");
 
     // 测试场景 2：测试 Iterator 是否正常工作（验证内存连续访问）
     int count = 0;
@@ -32,10 +32,10 @@ inline void unit_test_klist_allocation()
         if (item == (void *)0x12345678)
             count++;
     }
-    K_ASSERT(count == 1, "Iterator traversal failed");
+    K_T_ASSERT(count == 1, "Iterator traversal failed");
 
     // 测试场景 3：测试 remove_match (涉及 destroy 回收)
     list.remove_match([](void *p)
                       { return p == (void *)0x12345678; });
-    K_ASSERT(list.empty(), "List clear failed via remove_match");
+    K_T_ASSERT(list.empty(), "List clear failed via remove_match");
 }

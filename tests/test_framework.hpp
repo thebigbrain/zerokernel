@@ -36,8 +36,8 @@ inline void register_test(const std::string &name, TestFunc func)
         return true; }()
 
 // --- 稳健的内核断言宏 ---
-#ifndef K_ASSERT
-#define K_ASSERT(cond, msg)                                                             \
+#ifndef K_T_ASSERT
+#define K_T_ASSERT(cond, msg)                                                           \
     do                                                                                  \
     {                                                                                   \
         if (!(cond))                                                                    \

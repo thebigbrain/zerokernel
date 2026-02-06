@@ -15,7 +15,7 @@ public:
     explicit ContextInspector(ITaskContext *ctx)
         : _m_ctx(static_cast<MockTaskContext *>(ctx)) {}
 
-    // 仅仅暴露数据，不包含 K_ASSERT
+    // 仅仅暴露数据，不包含 K_T_ASSERT
     void *entry() const { return reinterpret_cast<void *>(_m_ctx->_entry); }
     uintptr_t arg(size_t i) const { return _m_ctx->_args[i]; }
     bool was_executed() const { return _m_ctx->_has_executed; }

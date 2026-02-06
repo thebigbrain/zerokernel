@@ -39,7 +39,7 @@ void unit_test_shadow_space_and_alignment_contract()
     // 注意：call 指令压入返回地址后，RSP 会变成 16n + 8。
     // 但我们的 setup_flow 是通过 ret “跳”进去的，模拟的是被 call 后的状态。
     // 契约：Win64 函数期望进入时 (RSP + 8) 是 16 的倍数（即 RSP 结尾为 8）
-    K_ASSERT(rsp_after_pops % 16 == 8, "ABI Violation: RSP before 'ret' must be 16n + 8");
+    K_T_ASSERT(rsp_after_pops % 16 == 8, "ABI Violation: RSP before 'ret' must be 16n + 8");
 
     // --- 校验 B: 影子空间 (Shadow Space) 契约 ---
     // 规则：在返回地址之上（高地址方向）必须至少有 32 字节可用空间
@@ -47,11 +47,11 @@ void unit_test_shadow_space_and_alignment_contract()
     uintptr_t shadow_space_start = rsp_after_pops + 8; // 越过返回地址
     uintptr_t available_space = (uintptr_t)stack_top - shadow_space_start;
 
-    K_ASSERT(available_space >= 32, "ABI Violation: Shadow space (32 bytes) is missing or insufficient");
+    K_T_ASSERT(available_space >= 32, "ABI Violation: Shadow space (32 bytes) is missing or insufficient");
 
     // --- 校验 C: 栈顶边界 ---
     // 确保整个布局没有超出我们分配的内存范围
-    K_ASSERT(rsp_in_context >= (uintptr_t)stack_mem, "Stack Overflow during setup_flow");
+    K_T_ASSERT(rsp_in_context >= (uintptr_t)stack_mem, "Stack Overflow during setup_flow");
 
     _aligned_free(stack_mem);
     std::cout << "  [PASS] Shadow Space and Alignment Contract Verified." << std::endl;

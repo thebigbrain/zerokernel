@@ -42,7 +42,7 @@ inline void unit_test_task_factory_integrity()
     std::cout << "[Step] Testing TCB creation..." << std::endl;
     ITaskControlBlock *tcb = factory->create_tcb(exec, res);
 
-    K_ASSERT(tcb != nullptr, "Factory failed to create TCB");
+    K_T_ASSERT(tcb != nullptr, "Factory failed to create TCB");
 
     std::cout << "[PASS] SimpleTaskFactory integrity verified." << std::endl;
 }

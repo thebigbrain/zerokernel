@@ -14,13 +14,13 @@ void unit_test_task_creation_integrity()
 
     KernelInspector ki(kernel);
 
-    K_ASSERT(ki.hooks() != nullptr, "Platform hooks are null.");
-    K_ASSERT(ki.context_factory() != nullptr, "Task Context Factory is null.");
+    K_T_ASSERT(ki.hooks() != nullptr, "Platform hooks are null.");
+    K_T_ASSERT(ki.context_factory() != nullptr, "Task Context Factory is null.");
 
     kernel->setup_infrastructure();
 
     auto lifecycle = ki.lifecycle();
-    K_ASSERT(lifecycle != nullptr, "Task lifecycle is null.");
+    K_T_ASSERT(lifecycle != nullptr, "Task lifecycle is null.");
 
     auto builder = ki.builder();
     auto strategy = ki.strategy();
@@ -29,10 +29,10 @@ void unit_test_task_creation_integrity()
     TaskResourceConfig res{};
     res.stack = builder->construct<KStackBuffer>(ki.heap(), 1024);
     ITaskControlBlock *tcb = lifecycle->spawn_task(exec, res);
-    K_ASSERT(tcb != nullptr, "Task is null.");
+    K_T_ASSERT(tcb != nullptr, "Task is null.");
 
     strategy->make_task_ready(tcb);
-    K_ASSERT(tcb->get_state() == TaskState::READY, "Task state is not READY.");
+    K_T_ASSERT(tcb->get_state() == TaskState::READY, "Task state is not READY.");
 
     std::cout << "[PASS] create_kernel_task logic is sound." << std::endl;
 }

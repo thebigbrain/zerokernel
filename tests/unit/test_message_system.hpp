@@ -42,12 +42,12 @@ inline void unit_test_message_system_integrity()
     bus->publish(test_msg);
     bus->dispatch_messages();
 
-    K_ASSERT(service.call_count == 1, "Even manual invoke failed! Macro is broken.");
+    K_T_ASSERT(service.call_count == 1, "Even manual invoke failed! Macro is broken.");
     service.call_count = 0; // 重置，继续测 Bus
 
     MessageCallback manual_cb = BIND_MESSAGE_CB(DomainServiceMock, on_dispatch, &service);
     manual_cb.invoke(test_msg);
     // 5. 领域规则断言
-    K_ASSERT(service.call_count == 1, "MessageBus failed to deliver event through BIND macro");
-    K_ASSERT(service.last_type == MessageType::EVENT_PRINT, "Message content corruption during dispatch");
+    K_T_ASSERT(service.call_count == 1, "MessageBus failed to deliver event through BIND macro");
+    K_T_ASSERT(service.last_type == MessageType::EVENT_PRINT, "Message content corruption during dispatch");
 }

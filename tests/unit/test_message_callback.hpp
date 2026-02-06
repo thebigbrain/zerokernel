@@ -26,5 +26,5 @@ inline void unit_test_message_callback_invoke()
     // 3. 执行
     cb.invoke(msg);
 
-    K_ASSERT(g_callback_executed, "MessageCallback failed to invoke function pointer!");
+    K_T_ASSERT(g_callback_executed, "MessageCallback failed to invoke function pointer!");
 }

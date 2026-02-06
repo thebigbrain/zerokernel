@@ -86,6 +86,6 @@ void unit_test_context_switch_lifecycle()
     // --- 任务执行 exit_stub 后，会 transit_to(main_ctx)，代码闪现回到这里 ---
     std::cout << "[INFO] Control flow recovered to Main Thread via transit_to." << std::endl;
 
-    K_ASSERT(g_logic_executed, "Test Failed");
+    K_T_ASSERT(g_logic_executed, "Test Failed");
     _aligned_free(stack_mem);
 }

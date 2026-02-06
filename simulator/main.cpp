@@ -15,6 +15,24 @@ extern "C" void kmain(PhysicalMemoryLayout layout,
 
 extern ISchedulingControl *g_platform_sched_ctrl;
 
+void print(const char *msg, PRINT_LEVEL level)
+{
+    const char *level_strs[] = {"DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
+
+    // 输出到控制台
+    std::printf("[%s] %s\n", level_strs[(int)level], msg);
+
+    if (IsDebuggerPresent())
+        __debugbreak();
+
+    std::fflush(stdout);
+
+    if (level == PRINT_LEVEL::LEVEL_FATAL)
+    {
+        std::terminate(); // 确保不归路
+    }
+}
+
 void run_simulator()
 {
     // --- 1. 硬件模拟环境初始化 ---
@@ -32,11 +50,7 @@ void run_simulator()
     hooks.dispatcher = signal_dispatcher;
     hooks.sched_control = sched_control;
     hooks.task_context_factory = new WinTaskContextFactory();
-    hooks.panic = [](const char *msg)
-    {
-        std::cout << "PANIC: " << msg << std::endl;
-        ExitProcess(1);
-    };
+    hooks.print = print;
 
     kmain(layout, info, &hooks);
 

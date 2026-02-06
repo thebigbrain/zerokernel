@@ -24,10 +24,10 @@ inline void unit_test_kernel_proxy_behavior()
     // 假设此处模拟 RootTask 发送 print
     proxy.publish(msg);
 
-    K_ASSERT(mock_bus.publish_called, "Proxy should call bus->publish");
-    K_ASSERT(mock_bus.last_published_type == MessageType::EVENT_PRINT, "Proxy failed to pass correct MessageType");
+    K_T_ASSERT(mock_bus.publish_called, "Proxy should call bus->publish");
+    K_T_ASSERT(mock_bus.last_published_type == MessageType::EVENT_PRINT, "Proxy failed to pass correct MessageType");
 
     // --- 测试场景 2: 协作调度 ---
     proxy.yield();
-    K_ASSERT(mock_sched.yield_called, "Proxy should forward yield call to ISchedulingControl");
+    K_T_ASSERT(mock_sched.yield_called, "Proxy should forward yield call to ISchedulingControl");
 }

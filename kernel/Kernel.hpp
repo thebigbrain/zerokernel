@@ -5,7 +5,7 @@
 
 #include "common/BootInfo.hpp"
 
-#include "panic.hpp"
+#include "diagnostics.hpp"
 #include "PlatformHooks.hpp"
 #include "StaticLayoutAllocator.hpp"
 
@@ -166,7 +166,6 @@ public:
         // 此行代码执行后，CPU 将跳转到 RootTask 的入口点执行
 
         idle_tcb->get_context()->transit_to(root_tcb->get_context());
-        // root_tcb->get_context()->jump_to();
 
         // --- 逻辑真空区 ---
         // 正常情况下，CPU 永远不会执行到这里。

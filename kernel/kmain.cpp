@@ -6,6 +6,8 @@
  */
 #include <new>
 
+#include "diagnostics.hpp"
+
 #include "Memory.hpp"
 #include "Kernel.hpp"
 #include "ITaskContextFactory.hpp"
@@ -24,11 +26,11 @@ void kernel_init_platform(PlatformHooks *hooks)
 }
 
 // 实现一个包装函数，供宏使用
-void kernel_panic_handler(const char *msg)
+void kernel_print_handler(const char *msg, PRINT_LEVEL level)
 {
-    if (g_platform_hooks && g_platform_hooks->panic)
+    if (g_platform_hooks && g_platform_hooks->print)
     {
-        g_platform_hooks->panic(msg);
+        g_platform_hooks->print(msg, level);
     }
     else
     {
