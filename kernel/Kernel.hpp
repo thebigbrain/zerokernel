@@ -5,7 +5,7 @@
 
 #include "common/BootInfo.hpp"
 
-#include "diagnostics.hpp"
+#include "common/diagnostics.hpp"
 #include "PlatformHooks.hpp"
 #include "StaticLayoutAllocator.hpp"
 
@@ -269,6 +269,8 @@ private:
         {
             if (_platform_hooks && _platform_hooks->halt)
                 _platform_hooks->halt();
+
+            K_DEBUG("Idle Task Running ...");
         }
     }
 

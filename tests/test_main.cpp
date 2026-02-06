@@ -47,6 +47,8 @@ int main()
         }
     }
 
+    std::cout << std::dec;
+
     std::cout << COLOR_CYAN << "===========================================" << COLOR_RESET << std::endl;
     if (failed == 0)
     {

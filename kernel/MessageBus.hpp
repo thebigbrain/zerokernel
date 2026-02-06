@@ -1,6 +1,7 @@
 #pragma once
 
 #include <common/Message.hpp>
+#include <common/diagnostics.hpp>
 #include "MessageCallback.hpp"
 #include "IMessageBus.hpp"
 #include "KList.hpp"

@@ -59,25 +59,33 @@ void WinTaskContext::setup_flow(void (*entry)(void *, void *), void *stack_top)
 void WinTaskContext::setup_registers()
 {
     uintptr_t curr = reinterpret_cast<uintptr_t>(this->stack_top);
-    curr &= ~0xFULL; // 16n
+    curr &= ~0xFULL; // 强制 16 字节对齐 (16n)
 
-    // 2. 影子空间 (32字节)
-    // 此时 curr = 16n - 40 = 16n + 8
-    curr -= _shadow_space_size;
+    // 1. 影子空间 (Shadow Space)
+    // 根据 ABI，它是调用者为被调用者准备的“救生圈”
+    curr -= 32;
 
-    // 1. 退出桩 (8字节)
+    // 2. 退出桩 (Exit Stub)
+    // 它是 main 函数返回后的“落脚点”，位于影子空间的正下方
     curr -= 8;
     *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(_exit_stub);
 
-    // 4. 放置结构体 (104字节 = 96字节寄存器 + 8字节RIP)
-    // curr (16n+8) - 104 = 16n - 96 = 16n
-    curr -= sizeof(WinX64Regs);
+    // 此时的 curr 必须满足 curr % 16 == 8，因为 ret 弹出后 RSP 变 16n
+    // 这种布局下，进入 main 后的第一条指令，RSP 将对齐在 16n + 8，完美！
 
+    // 3. 任务入口点 (RIP)
+    // 给 context_switch_asm 最后的 ret 使用
+    curr -= 8;
+    *reinterpret_cast<uintptr_t *>(curr) = reinterpret_cast<uintptr_t>(this->entry_func);
+
+    // 4. 寄存器镜像区
+    curr -= sizeof(WinX64Regs);
     this->sp = reinterpret_cast<WinX64Regs *>(curr);
+
     memset(this->sp, 0, sizeof(WinX64Regs));
 
-    // 5. 写入入口
-    this->sp->rip = reinterpret_cast<uintptr_t>(this->entry_func);
+    // 5. 刷入参数
+    update_regs_from_args();
 }
 
 void WinTaskContext::load_argument(size_t index, uintptr_t value)

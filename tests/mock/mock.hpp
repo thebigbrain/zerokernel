@@ -9,6 +9,8 @@
 
 #include "mock/hooks.hpp"
 
+extern void kernel_init_platform(PlatformHooks *hooks);
+
 /**
  * @brief Mock: 内核模拟器
  * 封装了物理内存、引导逻辑，并通过 Inspector 提供内核状态访问
@@ -29,6 +31,7 @@ public:
     Mock(size_t mem_size) : _ram_size(mem_size), _kernel(nullptr)
     {
         _platform_hooks = create_mock_platform();
+        kernel_init_platform(_platform_hooks);
 
         // 1. 模拟物理内存申请
         _ram_base = ::operator new(mem_size, std::align_val_t{16});

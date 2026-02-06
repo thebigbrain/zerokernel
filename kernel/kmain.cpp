@@ -6,7 +6,7 @@
  */
 #include <new>
 
-#include "diagnostics.hpp"
+#include "common/diagnostics.hpp"
 
 #include "Memory.hpp"
 #include "Kernel.hpp"

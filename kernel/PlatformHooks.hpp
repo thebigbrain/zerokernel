@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "diagnostics.hpp"
+#include "common/diagnostics.hpp"
 #include "ISchedulingControl.hpp"
 #include "ITaskContextFactory.hpp"
 #include "ISignal.hpp"

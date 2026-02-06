@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/diagnostics.hpp"
 #include "common/IUserRuntime.hpp"
 #include "IMessageBus.hpp"
 #include "ISchedulingControl.hpp"
