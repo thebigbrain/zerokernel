@@ -3,6 +3,8 @@
 - [从零实现OS内核，我与AI的对话（一）](https://zhuanlan.zhihu.com/p/1998851019510158639) [tag-001](https://github.com/thebigbrain/zerokernel/releases/tag/tag-001)
 - [从零实现OS内核，我与AI的对话（二）](https://zhuanlan.zhihu.com/p/1999244896482125402) [tag-002](https://github.com/thebigbrain/zerokernel/releases/tag/tag-002)
 
+- [从零实现OS内核，我与AI的对话（三 1-14）](https://www.zhihu.com/column/c_2003245411838759442) [tag-003](https://github.com/thebigbrain/zerokernel/releases/tag/tag-003)
+
 **每一个tag都是确保可运行的。**
 
 #### 创建构建目录
