@@ -4,6 +4,7 @@
 #include "test_framework.hpp"
 
 #include "kernel/Kernel.hpp"
+#include "inspect/KernelInspector.hpp"
 #include "kernel/StaticLayoutAllocator.hpp"
 
 #include "mock/hooks.hpp"
@@ -23,6 +24,8 @@ private:
     BootInfo _boot_info;
 
 public:
+    Mock() : Mock(32 * 1024) {}
+
     Mock(size_t mem_size) : _ram_size(mem_size), _kernel(nullptr)
     {
         _platform_hooks = create_mock_platform();

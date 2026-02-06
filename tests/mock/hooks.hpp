@@ -25,6 +25,8 @@ PlatformHooks *create_mock_platform()
     hooks->sched_control = &g_mock_sched;
     hooks->dispatcher = &g_mock_dispatcher;
     hooks->task_context_factory = &g_mock_factory;
+    hooks->print = [](const char *msg, PRINT_LEVEL level)
+    { std::cout << msg << std::endl; };
 
     return hooks;
 }

@@ -19,6 +19,7 @@ struct PlatformHooks
     // 平台相关的基础行为
     void (*print)(const char *msg, PRINT_LEVEL level);
     void (*reboot)();
+    void (*halt)();
 
     // 内存相关的平台特性
     void *(*get_initial_heap_base)();

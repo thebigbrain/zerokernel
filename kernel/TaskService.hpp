@@ -29,20 +29,16 @@ public:
      * @brief 绑定系统核心任务
      * 由 Kernel 在引导期间调用，传入已经静态分配好的 TCB
      */
-    void bind_core_tasks(ITaskControlBlock *root, ITaskControlBlock *idle)
+    void bind_root_task(ITaskControlBlock *root)
     {
         _root_task = root;
-        _idle_task = idle;
 
         // 系统任务通常也要进入调度策略，以便在没有业务任务时切换到 Idle
         if (_root_task)
             _strategy->make_task_ready(_root_task);
-        if (_idle_task)
-            _strategy->make_task_ready(_idle_task);
     }
 
     ITaskControlBlock *get_root_task() const { return _root_task; }
-    ITaskControlBlock *get_idle_task() const { return _idle_task; }
 
     /**
      * @brief 遍历系统中所有存在的任务（包括就绪、阻塞或运行中）

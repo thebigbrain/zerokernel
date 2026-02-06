@@ -67,6 +67,8 @@ private:
 
     PlatformHooks *_platform_hooks = nullptr;
 
+    ITaskControlBlock *_idle_tcb = nullptr;
+
 public:
     // 构造函数：注入 Builder 和 CPU 引擎
     Kernel(
@@ -127,10 +129,13 @@ public:
     void setup_boot_tasks()
     {
         ITaskControlBlock *root_tcb = create_kernel_task(_boot_info.root_task_entry, TaskPriority::ROOT, 4096, nullptr, "RootTask");
-        ITaskControlBlock *idle_tcb = create_kernel_task(_boot_info.idle_task_entry, TaskPriority::IDLE, 1024, nullptr, "IdleTask");
+        _idle_tcb = create_kernel_task(Kernel::static_idle_entry, TaskPriority::IDLE, 1024, this, "IdleTask");
 
         // 2. 缝合到 TaskService
-        _task_service->bind_core_tasks(root_tcb, idle_tcb);
+        _task_service->bind_root_task(root_tcb);
+
+        K_ASSERT(_idle_tcb->get_context() != nullptr, "Idle context not initialized");
+        K_ASSERT(root_tcb->get_context() != nullptr, "RootTask context missing");
     }
 
     /**
@@ -140,10 +145,10 @@ public:
      */
     void start_engine()
     {
+        K_INFO("Start Engine ...");
         // 1. 获取预先静态分配好的 RootTask
         // RootTask 及其 TaskContext 在 setup_infrastructure() 中已完成静态绑定
         ITaskControlBlock *root_tcb = _task_service->get_root_task();
-        ITaskControlBlock *idle_tcb = _task_service->get_idle_task();
 
         if (root_tcb == nullptr)
         {
@@ -165,7 +170,7 @@ public:
         // 从 RootTask 的 Archive 中提取初始上下文（SP, PC, Registers）并覆盖当前 CPU 状态
         // 此行代码执行后，CPU 将跳转到 RootTask 的入口点执行
 
-        idle_tcb->get_context()->transit_to(root_tcb->get_context());
+        _idle_tcb->get_context()->transit_to(root_tcb->get_context());
 
         // --- 逻辑真空区 ---
         // 正常情况下，CPU 永远不会执行到这里。
@@ -254,5 +259,27 @@ private:
 
         // 就地构造堆管理器
         return new (heap_mem) KernelHeapAllocator(actual_managed_start, actual_managed_size);
+    }
+
+private:
+    // 1. 实际的逻辑函数
+    void idle_task_logic()
+    {
+        while (true)
+        {
+            if (_platform_hooks && _platform_hooks->halt)
+                _platform_hooks->halt();
+        }
+    }
+
+    // 2. 静态中转：必须符合 (runtime, config) 的顺序
+    static void static_idle_entry(void *runtime, void *config)
+    {
+        // 根据你的设计，config 承载了 Kernel 的 this 指针
+        Kernel *self = static_cast<Kernel *>(config);
+        if (self)
+        {
+            self->idle_task_logic();
+        }
     }
 };
