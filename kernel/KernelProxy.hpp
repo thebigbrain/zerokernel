@@ -19,6 +19,7 @@ public:
     // 消息投递：依然是透传给总线
     void publish(const Message &msg) override
     {
+        K_DEBUG("KernelProxy::publish()");
         if (!_bus)
             return;
         _bus->publish(msg);

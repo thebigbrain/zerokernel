@@ -30,6 +30,8 @@
 
 #include "KernelProxy.hpp"
 
+const size_t MIN_STACK_SIZE = 16 * 1024;
+
 /**
  * @brief 任务档案：存储任务的静态元数据，不随任务状态改变
  */
@@ -128,8 +130,8 @@ public:
 
     void setup_boot_tasks()
     {
-        ITaskControlBlock *root_tcb = create_kernel_task(_boot_info.root_task_entry, TaskPriority::ROOT, 4096, nullptr, "RootTask");
-        _idle_tcb = create_kernel_task(Kernel::static_idle_entry, TaskPriority::IDLE, 1024, this, "IdleTask");
+        ITaskControlBlock *root_tcb = create_kernel_task(_boot_info.root_task_entry, TaskPriority::ROOT, MIN_STACK_SIZE, nullptr, "RootTask");
+        _idle_tcb = create_kernel_task(Kernel::static_idle_entry, TaskPriority::IDLE, MIN_STACK_SIZE, this, "IdleTask");
 
         // 2. 缝合到 TaskService
         _task_service->bind_root_task(root_tcb);
