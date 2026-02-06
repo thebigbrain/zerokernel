@@ -48,10 +48,10 @@ public:
     virtual void on_signal_received(SignalPacket packet) = 0;
 };
 
-class ISignalDispatcher
+class ISignalGate
 {
 public:
-    virtual ~ISignalDispatcher() = default;
+    virtual ~ISignalGate() = default;
 
     /**
      * @brief 绑定内核监听器

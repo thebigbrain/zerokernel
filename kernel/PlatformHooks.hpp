@@ -10,7 +10,7 @@
 struct PlatformHooks
 {
     ISchedulingControl *sched_control;
-    ISignalDispatcher *dispatcher;
+    ISignalGate *dispatcher;
     ITaskContextFactory *task_context_factory;
 
     // 平台相关的基础行为

@@ -5,41 +5,8 @@
 #include "kernel/KernelProxy.hpp"
 #include "common/Message.hpp"
 
-// 1. 简单的 Mock 实现，用于捕获 Proxy 的输出
-class MockMessageBus : public IMessageBus
-{
-public:
-    MessageType last_published_type = MessageType::NONE;
-    bool publish_called = false;
-
-    void publish(const Message &msg) override
-    {
-        publish_called = true;
-        last_published_type = msg.type;
-        // 如果需要，可以在这里校验 msg.data 里的字符串内容
-    }
-
-    // 单元测试中暂时不需要实现 subscribe/unsubscribe
-    void subscribe(MessageType type, MessageCallback cb) override {}
-    void unsubscribe(MessageType type, MessageCallback cb) override {}
-};
-
-class MockSchedulingControl : public ISchedulingControl
-{
-public:
-    bool yield_called = false;
-    bool terminate_called = false;
-
-    void yield_current_task() override
-    {
-        yield_called = true;
-    }
-
-    void terminate_current_task() override
-    {
-        terminate_called = true;
-    }
-};
+#include "mock/MockMessageBus.hpp"
+#include "mock/MockSchedulingControl.hpp"
 
 inline void unit_test_kernel_proxy_behavior()
 {

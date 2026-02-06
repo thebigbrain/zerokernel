@@ -4,17 +4,17 @@
 #include <kernel/SignalType.hpp>
 #include <synchapi.h>
 #include <processthreadsapi.h>
-#include "Win32SignalDispatcher.hpp"
+#include "Win32SignalGate.hpp"
 
 class Win32SchedulingControl : public ISchedulingControl
 {
 private:
     HANDLE _kernel_thread_event; // 用于唤醒内核管理线程
 
-    Win32SignalDispatcher *_dispatcher; // 持有分发器引用
+    Win32SignalGate *_dispatcher; // 持有分发器引用
 
 public:
-    Win32SchedulingControl(Win32SignalDispatcher *dispatcher)
+    Win32SchedulingControl(Win32SignalGate *dispatcher)
         : _dispatcher(dispatcher)
     {
         _kernel_thread_event = CreateEvent(NULL, FALSE, FALSE, NULL);

@@ -17,6 +17,22 @@ public:
     {
     }
 
+    PlatformHooks *hooks() const { return _kernel->_platform_hooks; }
+
+    // 检查内核是否有效
+    bool is_valid() const { return _kernel != nullptr; }
+
+    // 基础设施访问
+    IMessageBus *bus() const { return _kernel->_bus; }
+    ITaskLifecycle *lifecycle() const { return _kernel->_lifecycle; }
+    TaskService *task_service() const { return _kernel->_task_service; }
+    IAllocator *heap() const { return _kernel->_runtime_heap; }
+    IObjectBuilder *builder() const { return _kernel->_builder; }
+    ISchedulingStrategy *strategy() const { return _kernel->_strategy; }
+    ISchedulingControl *control() const { return _kernel->_platform_hooks->sched_control; }
+
+    ITaskContextFactory *context_factory() const { return _kernel->_platform_hooks->task_context_factory; }
+
     /**
      * @brief 核心查询方法：基于 ID 检查任务是否运行过
      */
@@ -68,18 +84,6 @@ public:
     {
         _executed_ids.clear();
     }
-
-    // 检查内核是否有效
-    bool is_valid() const { return _kernel != nullptr; }
-
-    // 基础设施访问
-    IMessageBus *bus() const { return _kernel->_bus; }
-    ITaskLifecycle *lifecycle() const { return _kernel->_lifecycle; }
-    TaskService *task_service() const { return _kernel->_task_service; }
-    IAllocator *heap() const { return _kernel->_runtime_heap; }
-    IObjectBuilder *builder() const { return _kernel->_builder; }
-    ISchedulingStrategy *strategy() const { return _kernel->_strategy; }
-    ISchedulingControl *control() const { return _kernel->_platform_hooks->sched_control; }
 
     /**
      * @brief 在 Mock 类中补全任务创建逻辑

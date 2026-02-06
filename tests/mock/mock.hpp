@@ -6,6 +6,8 @@
 #include "kernel/Kernel.hpp"
 #include "kernel/StaticLayoutAllocator.hpp"
 
+#include "mock/hooks.hpp"
+
 /**
  * @brief Mock: 内核模拟器
  * 封装了物理内存、引导逻辑，并通过 Inspector 提供内核状态访问
@@ -13,16 +15,18 @@
 class Mock
 {
 private:
-    void *_ram_base;
-    size_t _ram_size;
-    Kernel *_kernel;
+    void *_ram_base = nullptr;
+    size_t _ram_size = 0;
+    Kernel *_kernel = nullptr;
 
-    PlatformHooks *_platform_hooks;
+    PlatformHooks *_platform_hooks = nullptr;
     BootInfo _boot_info;
 
 public:
     Mock(size_t mem_size) : _ram_size(mem_size), _kernel(nullptr)
     {
+        _platform_hooks = create_mock_platform();
+
         // 1. 模拟物理内存申请
         _ram_base = ::operator new(mem_size, std::align_val_t{16});
         _boot_info = create_mock_boot_info(_ram_base, _ram_size);
@@ -41,6 +45,9 @@ public:
             _kernel->~Kernel();
         if (_ram_base)
             ::operator delete(_ram_base, std::align_val_t{16});
+
+        if (_platform_hooks)
+            destroy_mock_platform(_platform_hooks);
     }
 
     const BootInfo &get_boot_info()

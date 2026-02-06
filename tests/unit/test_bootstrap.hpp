@@ -18,7 +18,12 @@ void unit_test_bootstrap()
     // - Kernel 对象的 Placement New
     Mock mock(64 * 1024);
     auto *kernel = mock.kernel();
+
+    K_ASSERT(kernel != nullptr, "kernel is null");
+
     KernelInspector ki(kernel);
+
+    K_ASSERT(ki.hooks() != nullptr, "Platform hooks are null");
 
     // 2. Execution: 执行内核引导
     // 这将触发：建立堆、建立 Builder、创建 Root/Idle 任务等

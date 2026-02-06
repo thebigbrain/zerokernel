@@ -1,36 +1,50 @@
 #pragma once
 
-#include <kernel/ISignal.hpp>
+#include <atomic>
+#include <iostream>
+#include "kernel/ISignal.hpp"
 
-/**
- * @file MockSignalDispatcher.cpp
- * 职责：手动模拟信号分发，用于测试 Kernel 的逻辑
- */
-class MockSignalDispatcher : public ISignalDispatcher
+class MockSignalDispatcher : public ISignalGate
 {
 private:
-    ISignalListener *_listener = nullptr;
-    bool _active = false;
+    ISignalListener *m_listener = nullptr;
+    std::atomic<bool> m_active{false};
 
 public:
+    // 绑定内核监听器：内核处理函数（如 TrapHandler）会通过这个接口注册进来
     void bind_listener(ISignalListener *listener) override
     {
-        _listener = listener;
+        m_listener = listener;
+        std::cout << "[Mock Dispatcher] Listener bound." << std::endl;
     }
 
+    // 激活：模拟开启 CPU 全局中断
     void activate() override
     {
-        _active = true;
+        m_active = true;
+        std::cout << "[Mock Dispatcher] Signals Activated (Interrupts On)." << std::endl;
     }
 
-    // 这是一个 Mock 专有的方法，由你的测试脚本调用
-    void trigger_mock_signal(SignalType type, uint32_t vector, ISignalContext *frame)
+    // 关闭：模拟进入临界区（CLI 指令）
+    void deactivate() override
     {
-        if (_active && _listener)
+        m_active = false;
+        std::cout << "[Mock Dispatcher] Signals Deactivated (Interrupts Off)." << std::endl;
+    }
+
+    // --- 模拟器特有方法：手动触发一个信号 ---
+    void trigger_mock_signal(SignalEvent signal_id)
+    {
+        if (m_active && m_listener)
         {
-            SignalPacket packet{type, vector, frame};
-            // 模拟硬件中断：直接调用 Kernel 的监听接口
-            _listener->on_signal_received(packet);
+            // 模拟异步中断的到来
+            m_listener->on_signal_received(SignalPacket{SignalType::Interrupt, signal_id, nullptr});
+        }
+        else if (!m_active)
+        {
+            std::cout << "[Mock Dispatcher] Signal ignored (Deactivated)." << std::endl;
         }
     }
+
+    bool is_active() const { return m_active; }
 };

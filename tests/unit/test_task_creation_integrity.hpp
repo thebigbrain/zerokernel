@@ -11,19 +11,23 @@ void unit_test_task_creation_integrity()
 {
     Mock mock(32 * 1024);
     Kernel *kernel = mock.kernel();
-    KernelInspector inspector(kernel);
+
+    KernelInspector ki(kernel);
+
+    K_ASSERT(ki.hooks() != nullptr, "Platform hooks are null.");
+    K_ASSERT(ki.context_factory() != nullptr, "Task Context Factory is null.");
 
     kernel->setup_infrastructure();
 
-    auto lifecycle = inspector.lifecycle();
+    auto lifecycle = ki.lifecycle();
     K_ASSERT(lifecycle != nullptr, "Task lifecycle is null.");
 
-    auto builder = inspector.builder();
-    auto strategy = inspector.strategy();
+    auto builder = ki.builder();
+    auto strategy = ki.strategy();
 
     TaskExecutionInfo exec{};
     TaskResourceConfig res{};
-    res.stack = builder->construct<KStackBuffer>(inspector.heap(), 1024);
+    res.stack = builder->construct<KStackBuffer>(ki.heap(), 1024);
     ITaskControlBlock *tcb = lifecycle->spawn_task(exec, res);
     K_ASSERT(tcb != nullptr, "Task is null.");
 

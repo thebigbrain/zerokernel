@@ -5,7 +5,7 @@
 #include "Simulator.hpp"
 #include "IdleTask.hpp"
 #include "WinTaskContextFactory.hpp"
-#include "Win32SignalDispatcher.hpp"
+#include "Win32SignalGate.hpp"
 #include "Win32SchedulingControl.hpp"
 #include <kernel/PlatformHooks.hpp>
 
@@ -23,7 +23,7 @@ void run_simulator()
     BootInfo info;
     load_os_image(IMG_PATH, layout, &info);
 
-    auto *signal_dispatcher = new Win32SignalDispatcher();
+    auto *signal_dispatcher = new Win32SignalGate();
     auto *sched_control = new Win32SchedulingControl(signal_dispatcher);
 
     g_platform_sched_ctrl = sched_control;

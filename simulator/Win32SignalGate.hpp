@@ -7,7 +7,7 @@
 #include <kernel/SignalType.hpp>
 #include "Win32SignalContext.hpp"
 
-class Win32SignalDispatcher : public ISignalDispatcher
+class Win32SignalGate : public ISignalGate
 {
 private:
     ISignalListener *_listener = nullptr;
