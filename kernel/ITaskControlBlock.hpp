@@ -14,6 +14,7 @@ public:
     virtual ~ITaskControlBlock() = default;
 
     virtual uint32_t get_id() const = 0;
+    virtual const char *get_name() const = 0;
 
     // 状态管理
     virtual TaskState get_state() const = 0;

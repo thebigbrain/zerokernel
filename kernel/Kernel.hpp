@@ -28,7 +28,12 @@
 #include "BitmapIdGenerator.hpp"
 #include "SimpleTaskFactory.hpp"
 
+#include "SignalType.hpp"
+
 #include "KernelProxy.hpp"
+#include "SignalDispatcher.hpp"
+
+#include "TaskScheduler.hpp"
 
 const size_t MIN_STACK_SIZE = 16 * 1024;
 
@@ -71,6 +76,9 @@ private:
 
     ITaskControlBlock *_idle_tcb = nullptr;
 
+    SignalDispatcher *_signal_dispatcher = nullptr;
+    TaskScheduler *_task_scheduler = nullptr;
+
 public:
     // 构造函数：注入 Builder 和 CPU 引擎
     Kernel(
@@ -86,7 +94,8 @@ public:
           _task_service(nullptr),
           _bus(nullptr),
           _lifecycle(nullptr),
-          _strategy(nullptr)
+          _strategy(nullptr),
+          _signal_dispatcher(nullptr)
     {
     }
 
@@ -121,6 +130,9 @@ public:
 
         _strategy = _builder->construct<RoundRobinStrategy>(_builder);
         _lifecycle = _builder->construct<SimpleTaskLifecycle>(_builder, _tcb_factory);
+
+        _task_scheduler = _builder->construct<TaskScheduler>(_strategy, nullptr);
+        _signal_dispatcher = _builder->construct<SignalDispatcher>(*_task_scheduler);
 
         // 组装 Service
         _task_service = _builder->construct<TaskService>(_lifecycle, _strategy, _bus);
@@ -172,7 +184,16 @@ public:
         // 从 RootTask 的 Archive 中提取初始上下文（SP, PC, Registers）并覆盖当前 CPU 状态
         // 此行代码执行后，CPU 将跳转到 RootTask 的入口点执行
 
-        _idle_tcb->get_context()->transit_to(root_tcb->get_context());
+        _task_scheduler->set_current(_idle_tcb);
+
+        _task_scheduler->switch_to(root_tcb);
+
+        // 3. 当 RootTask 调用 yield 并最终回到这里时
+        K_INFO("Kernel Engine: Idle flow resumed.");
+        while (true)
+        {
+            _platform_hooks->halt();
+        }
 
         // --- 逻辑真空区 ---
         // 正常情况下，CPU 永远不会执行到这里。
@@ -187,16 +208,12 @@ public:
     void on_signal_received(SignalPacket packet) override
     {
         // 这里是内核在启动后的“复活点”
-        this->dispatch_logic(packet);
+        if (_signal_dispatcher == nullptr)
+            return;
+        _signal_dispatcher->dispatch(packet);
     }
 
 private:
-    void dispatch_logic(SignalPacket &packet)
-    {
-        // 后续的路由决策中心
-        // switch(packet.type) { ... }
-    }
-
     ITaskControlBlock *create_kernel_task(TaskEntry entry, TaskPriority priority, size_t stack_size, void *config = nullptr, const char *name = "k_service_unamed")
     {
         TaskExecutionInfo exec{};
@@ -205,6 +222,7 @@ private:
         exec.config = config;
 
         TaskResourceConfig res{};
+        res.name = name;
         res.priority = priority;
         res.stack = _builder->construct<KStackBuffer>(_runtime_heap, stack_size);
 

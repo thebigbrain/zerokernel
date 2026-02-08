@@ -17,6 +17,10 @@ static MockSchedulingControl g_mock_sched;
 static MockSignalDispatcher g_mock_dispatcher;
 static MockTaskContextFactory g_mock_factory;
 
+extern "C" void klog(LogLevel level, const char *fmt, ...)
+{
+}
+
 PlatformHooks *create_mock_platform()
 {
     auto *hooks = new PlatformHooks();
@@ -25,8 +29,6 @@ PlatformHooks *create_mock_platform()
     hooks->sched_control = &g_mock_sched;
     hooks->dispatcher = &g_mock_dispatcher;
     hooks->task_context_factory = &g_mock_factory;
-    hooks->print = [](const char *msg, PRINT_LEVEL level)
-    { std::cout << msg << std::endl; };
 
     return hooks;
 }

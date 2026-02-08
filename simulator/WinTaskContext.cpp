@@ -10,7 +10,7 @@ extern "C" void context_switch_asm(void **old_sp, void *new_sp);
 void platform_task_exit_stub()
 {
     // 假设可以通过某种方式获取到当前的控制接口
-    // 或者直接触发底层 Trap 信号
+    // 或者直接触发底层 Yield 信号
     extern ISchedulingControl *g_platform_sched_ctrl;
     g_platform_sched_ctrl->terminate_current_task();
 }

@@ -22,15 +22,15 @@ public:
 
     void yield_current_task() override
     {
-        // 主动触发一个 Trap 类型的信号，ID 约定为 Yield
-        _dispatcher->trigger_manual_signal(SignalType::Trap, SignalEvent::Yield);
+        // 主动触发一个 Yield 类型的信号，ID 约定为 Yield
+        _dispatcher->trigger_manual_signal(SignalType::Yield, SignalEvent::Yield);
     }
 
     void terminate_current_task() override
     {
-        // 1. 主动触发一个 Trap 类型的信号，ID 约定为 Terminate
+        // 1. 主动触发一个 Yield 类型的信号，ID 约定为 Terminate
         // 这会让内核进入 on_signal_received 逻辑
-        _dispatcher->trigger_manual_signal(SignalType::Trap, SignalEvent::Terminate);
+        _dispatcher->trigger_manual_signal(SignalType::Yield, SignalEvent::Terminate);
         // 彻底终结当前 Windows 线程
         ExitThread(0);
     }

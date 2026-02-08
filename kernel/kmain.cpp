@@ -25,22 +25,6 @@ void kernel_init_platform(PlatformHooks *hooks)
     g_platform_hooks = hooks;
 }
 
-// 实现一个包装函数，供宏使用
-void kernel_print_handler(const char *msg, PRINT_LEVEL level)
-{
-    if (g_platform_hooks && g_platform_hooks->print)
-    {
-        g_platform_hooks->print(msg, level);
-    }
-    else
-    {
-        // 如果钩子还没初始化好就崩了，执行最原始的死循环
-        // 在真机上这通常意味着通过寄存器直接操作 LED 或串口
-        while (true)
-            ;
-    }
-}
-
 extern "C" void kmain(
     PhysicalMemoryLayout layout,
     BootInfo info,

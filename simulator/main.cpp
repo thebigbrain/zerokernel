@@ -8,30 +8,13 @@
 #include "Win32SignalGate.hpp"
 #include "Win32SchedulingControl.hpp"
 #include <kernel/PlatformHooks.hpp>
+#include "LoggerWin.hpp"
 
 extern "C" void kmain(PhysicalMemoryLayout layout,
                       BootInfo info,
                       PlatformHooks *platform_hooks);
 
 extern ISchedulingControl *g_platform_sched_ctrl;
-
-void print(const char *msg, PRINT_LEVEL level)
-{
-    const char *level_strs[] = {"DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
-
-    // 输出到控制台
-    std::printf("[%s] %s\n", level_strs[(int)level], msg);
-
-    if (IsDebuggerPresent())
-        __debugbreak();
-
-    std::fflush(stdout);
-
-    if (level == PRINT_LEVEL::LEVEL_FATAL)
-    {
-        std::terminate(); // 确保不归路
-    }
-}
 
 void run_simulator()
 {
@@ -50,7 +33,11 @@ void run_simulator()
     hooks.dispatcher = signal_dispatcher;
     hooks.sched_control = sched_control;
     hooks.task_context_factory = new WinTaskContextFactory();
-    hooks.print = print;
+    hooks.halt = []()
+    {
+        klog(LogLevel::Info, "Halt");
+        Sleep(5000);
+    };
 
     kmain(layout, info, &hooks);
 

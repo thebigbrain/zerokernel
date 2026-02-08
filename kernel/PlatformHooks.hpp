@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include "common/diagnostics.hpp"
 #include "ISchedulingControl.hpp"
 #include "ITaskContextFactory.hpp"
 #include "ISignal.hpp"
@@ -17,7 +16,6 @@ struct PlatformHooks
     ITaskContextFactory *task_context_factory;
 
     // 平台相关的基础行为
-    void (*print)(const char *msg, PRINT_LEVEL level);
     void (*reboot)();
     void (*halt)();
 
