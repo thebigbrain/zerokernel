@@ -5,6 +5,8 @@
 
 - [从零实现OS内核，我与AI的对话（三）](documents/从零实现OS内核，我与AI的对话（三）.md) [tag-003](https://github.com/thebigbrain/zerokernel/releases/tag/tag-003)
 
+- [从零实现OS内核，我与AI的对话（四）](documents/从零实现OS内核，我与AI的对话（四）.md) [tag-004](https://github.com/thebigbrain/zerokernel/releases/tag/tag-004)
+
 **每一个tag都是确保可运行的。**
 
 #### 创建构建目录
