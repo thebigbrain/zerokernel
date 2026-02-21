@@ -6,7 +6,6 @@
 #include "unit/test_zimg.hpp"
 #include "unit/test_abi_frames.hpp"
 #include "unit/test_message_system.hpp"
-#include "unit/test_kernel_proxy.hpp"
 #include "unit/test_task_factory.hpp"
 #include "unit/test_task_creation_integrity.hpp"
 #include "unit/test_bootstrap.hpp"
@@ -29,9 +28,7 @@ K_TEST_CASE(unit_test_klist_allocation, "[Step 1] Running Unit Contract: KList")
 K_TEST_CASE(unit_test_task_factory_integrity, "[Step 2] Task Factory: Dependency Injection");
 K_TEST_CASE(unit_test_message_system_integrity, "[Step 3] MessageBus: Pub-Sub Flow");
 
-// --- 运行时与代理 (Service Layer) ---
-K_TEST_CASE(unit_test_kernel_proxy_behavior, "KernelProxy: API Forwarding");
-
+// --- 引导与任务创建 ---
 K_TEST_CASE(unit_test_task_creation_integrity, "Task Creation Integrity");
 K_TEST_CASE(unit_test_bootstrap, "Kernel: Bootstrap");
 

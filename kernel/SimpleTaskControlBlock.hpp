@@ -53,11 +53,6 @@ public:
 
     uint32_t get_id() const override { return _id; }
 
-    const char *get_name() const override
-    {
-        return _res_config.name;
-    }
-
     TaskState get_state() const override { return _state; }
 
     void set_state(TaskState state) override { _state = state; }

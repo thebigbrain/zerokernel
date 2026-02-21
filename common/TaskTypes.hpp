@@ -41,7 +41,6 @@ struct TaskExecutionInfo
 class KStackBuffer;
 struct TaskResourceConfig
 {
-    const char *name;
     TaskPriority priority;
     KStackBuffer *stack; // 不再是裸指针，而是受管对象
 

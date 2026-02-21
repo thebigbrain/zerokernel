@@ -142,8 +142,8 @@ public:
 
     void setup_boot_tasks()
     {
-        ITaskControlBlock *root_tcb = create_kernel_task(_boot_info.root_task_entry, TaskPriority::ROOT, MIN_STACK_SIZE, nullptr, "RootTask");
-        _idle_tcb = create_kernel_task(Kernel::static_idle_entry, TaskPriority::IDLE, MIN_STACK_SIZE, this, "IdleTask");
+        ITaskControlBlock *root_tcb = create_kernel_task(_boot_info.root_task_entry, TaskPriority::ROOT, 4 * MIN_STACK_SIZE, nullptr, "RootTask");
+        _idle_tcb = create_kernel_task(nullptr, TaskPriority::IDLE, MIN_STACK_SIZE, this, "IdleTask");
 
         // 2. 缝合到 TaskService
         _task_service->bind_root_task(root_tcb);
@@ -192,7 +192,10 @@ public:
         K_INFO("Kernel Engine: Idle flow resumed.");
         while (true)
         {
-            _platform_hooks->halt();
+            _bus->dispatch_messages();
+
+            if (_platform_hooks && _platform_hooks->halt)
+                _platform_hooks->halt();
         }
 
         // --- 逻辑真空区 ---
@@ -218,11 +221,10 @@ private:
     {
         TaskExecutionInfo exec{};
         exec.entry = entry;
-        exec.runtime = _builder->construct<KernelProxy>(_bus, _platform_hooks->sched_control);
+        exec.runtime = _builder->construct<KernelRuntimeProxy>(_bus, _platform_hooks);
         exec.config = config;
 
         TaskResourceConfig res{};
-        res.name = name;
         res.priority = priority;
         res.stack = _builder->construct<KStackBuffer>(_runtime_heap, stack_size);
 
@@ -238,13 +240,15 @@ private:
             _strategy->make_task_ready(tcb);
         }
 
+        tcb->set_name(name);
+
         return tcb;
     }
 
     void handle_event_print(const Message &msg)
     {
         // 简单的日志处理逻辑
-        printf("[Kernel Log] Received Message Type: %d\n", static_cast<int>(msg.type));
+        K_DEBUG("Received Message Type: %d\n", static_cast<int>(msg.type));
     }
 
     /**
@@ -279,29 +283,5 @@ private:
 
         // 就地构造堆管理器
         return new (heap_mem) KernelHeapAllocator(actual_managed_start, actual_managed_size);
-    }
-
-private:
-    // 1. 实际的逻辑函数
-    void idle_task_logic()
-    {
-        while (true)
-        {
-            if (_platform_hooks && _platform_hooks->halt)
-                _platform_hooks->halt();
-
-            K_DEBUG("Idle Task Running ...");
-        }
-    }
-
-    // 2. 静态中转：必须符合 (runtime, config) 的顺序
-    static void static_idle_entry(void *runtime, void *config)
-    {
-        // 根据你的设计，config 承载了 Kernel 的 this 指针
-        Kernel *self = static_cast<Kernel *>(config);
-        if (self)
-        {
-            self->idle_task_logic();
-        }
     }
 };

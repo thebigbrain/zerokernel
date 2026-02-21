@@ -16,4 +16,6 @@ public:
 
     // 取消订阅
     virtual void unsubscribe(MessageType type, MessageCallback cb) = 0;
+
+    virtual void dispatch_messages() = 0;
 };

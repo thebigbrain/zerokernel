@@ -10,11 +10,26 @@
  */
 class ITaskControlBlock
 {
+private:
+    char _name[32];
+
 public:
     virtual ~ITaskControlBlock() = default;
 
     virtual uint32_t get_id() const = 0;
-    virtual const char *get_name() const = 0;
+
+    virtual const char *get_name() const
+    {
+        return _name;
+    }
+
+    virtual void set_name(const char *name)
+    {
+        // 使用安全的拷贝函数，确保不越界
+        // Windows 下可用 strncpy_s，通用可用 strncpy
+        std::strncpy(_name, name, sizeof(_name) - 1);
+        _name[sizeof(_name) - 1] = '\0'; // 强制结尾
+    }
 
     // 状态管理
     virtual TaskState get_state() const = 0;

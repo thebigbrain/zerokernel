@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "ISchedulingControl.hpp"
 #include "ITaskContextFactory.hpp"
+#include "ResourceManager.hpp"
 #include "ISignal.hpp"
 
 /**
@@ -14,6 +15,7 @@ struct PlatformHooks
     ISchedulingControl *sched_control;
     ISignalGate *dispatcher;
     ITaskContextFactory *task_context_factory;
+    ResourceManager *resource_manager;
 
     // 平台相关的基础行为
     void (*reboot)();
@@ -21,4 +23,6 @@ struct PlatformHooks
 
     // 内存相关的平台特性
     void *(*get_initial_heap_base)();
+
+    void (*refresh_display)();
 };
